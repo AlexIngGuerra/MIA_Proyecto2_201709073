@@ -3,6 +3,7 @@ package analizador
 import (
 	"MIA/comandos"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -22,6 +23,9 @@ func (self Analizador) Analizar(entrada string) {
 
 			fmt.Println(linea[i])
 			comando := self.getComando(linea[i])
+			if len(comando) < 1 {
+				continue
+			}
 
 			if strings.ToLower(comando[0]) == "pause" {
 				var tmp string
@@ -33,9 +37,10 @@ func (self Analizador) Analizar(entrada string) {
 			} else if strings.ToLower(comando[0]) == "mkdisk" {
 				self.cmdMkdisk(comando)
 			}
+
 		}
 
-	}
+	} //Fin For de lineas
 }
 
 func (self Analizador) getComando(linea string) []string {
@@ -82,6 +87,7 @@ func (self Analizador) cmdExec(comando []string) {
 	}
 
 	valor := cmd.Ejecutar()
+	fmt.Print("\n")
 	self.Analizar(valor)
 }
 
@@ -90,6 +96,27 @@ func (self Analizador) cmdMkdisk(comando []string) {
 
 	for i := 1; i < len(comando); i++ {
 		if i%2 != 0 && (i+1) < len(comando) {
+
+			if strings.ToLower(comando[i]) == "-size" {
+
+				valor, err := strconv.Atoi(comando[i+1])
+				if err != nil || valor < 1 {
+					fmt.Println("Error: El parametro size solo puede contener numeros enteros positivos")
+				} else {
+					cmd.Size = valor
+				}
+
+			} else if strings.ToLower(comando[i]) == "-fit" {
+				valor := strings.ToUpper(comando[i+1])
+				cmd.Fit = valor
+
+			} else if strings.ToLower(comando[i]) == "-unit" {
+				valor := strings.ToUpper(comando[i+1])
+				cmd.Unit = valor
+
+			} else if strings.ToLower(comando[i]) == "-path" {
+				cmd.Path = comando[i+1]
+			}
 
 		}
 	}
