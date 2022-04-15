@@ -118,3 +118,26 @@ func (self Mkdisk) crearArchivoSiNoExiste(Path string) bool {
 	fmt.Println("Error: No se puede crear el disco porque el archivo ya existe.")
 	return false
 }
+
+func (self Mkdisk) EjecutarRmdisk() {
+	if self.Path != "" {
+
+		fmt.Println("Desea eliminar el disco: y/n")
+		var comando string
+		fmt.Scanln(&comando)
+
+		if comando == "y" {
+			err := os.Remove(self.Path)
+			if err != nil {
+				fmt.Println("Error: No se ha podido eliminar el disco")
+				fmt.Println(err)
+			} else {
+				fmt.Println("Eliminado el disco en: " + self.Path)
+			}
+		}
+
+	} else {
+		fmt.Println("Error: El comando rmdisk necesita el parametro path")
+	}
+	fmt.Print("\n")
+}

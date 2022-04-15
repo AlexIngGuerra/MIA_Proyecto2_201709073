@@ -36,6 +36,12 @@ func (self Analizador) Analizar(entrada string) {
 
 			} else if strings.ToLower(comando[0]) == "mkdisk" {
 				self.cmdMkdisk(comando)
+
+			} else if strings.ToLower(comando[0]) == "rmdisk" {
+				self.cmdRmdisk(comando)
+
+			} else if strings.ToLower(comando[0]) == "fdisk" {
+				self.cmdFdisk(comando)
 			}
 
 		}
@@ -43,6 +49,7 @@ func (self Analizador) Analizar(entrada string) {
 	} //Fin For de lineas
 }
 
+//Obtener el comando
 func (self Analizador) getComando(linea string) []string {
 	var comando []string
 	comentario := strings.Split(linea, "#")
@@ -73,6 +80,7 @@ func (self Analizador) getComando(linea string) []string {
 	return comando
 }
 
+//Comando Exec
 func (self Analizador) cmdExec(comando []string) {
 	cmd := comandos.NewExec()
 
@@ -91,6 +99,7 @@ func (self Analizador) cmdExec(comando []string) {
 	self.Analizar(valor)
 }
 
+//Comando Mkdisk
 func (self Analizador) cmdMkdisk(comando []string) {
 	cmd := comandos.NewMkdisk()
 
@@ -107,12 +116,25 @@ func (self Analizador) cmdMkdisk(comando []string) {
 				}
 
 			} else if strings.ToLower(comando[i]) == "-fit" {
+
 				valor := strings.ToUpper(comando[i+1])
-				cmd.Fit = valor
+
+				if valor == "FF" || valor == "WF" || valor == "BF" {
+					cmd.Fit = valor
+				} else {
+					fmt.Println("Error: El valor del parametro fit es incorrecto")
+					continue
+				}
 
 			} else if strings.ToLower(comando[i]) == "-unit" {
 				valor := strings.ToUpper(comando[i+1])
-				cmd.Unit = valor
+
+				if valor == "M" || valor == "K" {
+					cmd.Unit = valor
+				} else {
+					fmt.Println("Error: El valor del parametro unit es incorrecto")
+					continue
+				}
 
 			} else if strings.ToLower(comando[i]) == "-path" {
 				cmd.Path = comando[i+1]
@@ -122,4 +144,27 @@ func (self Analizador) cmdMkdisk(comando []string) {
 	}
 
 	cmd.Ejecutar()
+}
+
+//Comando Rmdisk
+func (self Analizador) cmdRmdisk(comando []string) {
+	cmd := comandos.NewMkdisk()
+
+	for i := 1; i < len(comando); i++ {
+		if i%2 != 0 && (i+1) < len(comando) {
+
+			if strings.ToLower(comando[i]) == "-path" {
+				cmd.Path = comando[i+1]
+			} else {
+				fmt.Println("Error: El comando exec no contiene el comando \"" + comando[i] + "\"")
+			}
+
+		}
+	}
+
+	cmd.EjecutarRmdisk()
+}
+
+func (self Analizador) cmdFdisk(comando []string) {
+
 }
