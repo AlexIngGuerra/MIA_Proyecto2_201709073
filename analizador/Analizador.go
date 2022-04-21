@@ -23,13 +23,13 @@ func (self Analizador) Analizar(entrada string) {
 
 			fmt.Println(linea[i])
 			comando := self.getComando(linea[i])
-			if len(comando) < 1 {
+			if len(comando) <= 0 {
 				continue
 			}
 
-			if strings.ToLower(comando[0]) == "pause" {
-				var tmp string
-				fmt.Scanln(&tmp)
+			if strings.ToLower(comando[0]) == "pause" || strings.ToLower(linea[i]) == "linea" {
+				var comando string
+				fmt.Scanln(&comando)
 
 			} else if strings.ToLower(comando[0]) == "exec" {
 				self.cmdExec(comando)
@@ -51,6 +51,7 @@ func (self Analizador) Analizar(entrada string) {
 
 //Obtener el comando
 func (self Analizador) getComando(linea string) []string {
+
 	var comando []string
 	comentario := strings.Split(linea, "#")
 	comillas := strings.Split(comentario[0], "\"")
@@ -77,6 +78,7 @@ func (self Analizador) getComando(linea string) []string {
 		}
 
 	}
+
 	return comando
 }
 
@@ -165,6 +167,67 @@ func (self Analizador) cmdRmdisk(comando []string) {
 	cmd.EjecutarRmdisk()
 }
 
+//COMANDO FDISK
 func (self Analizador) cmdFdisk(comando []string) {
+	cmd := comandos.NewFdisk()
 
+	for i := 1; i < len(comando); i++ {
+		if i%2 != 0 && (i+1) < len(comando) {
+
+			if strings.ToLower(comando[i]) == "-size" {
+
+				valor, err := strconv.Atoi(comando[i+1])
+				if err != nil || valor < 1 {
+					fmt.Println("Error: El parametro size solo puede contener numeros enteros positivos")
+				} else {
+					cmd.Size = valor
+				}
+
+			} else if strings.ToLower(comando[i]) == "-unit" {
+
+				valor := strings.ToUpper(comando[i+1])
+
+				if valor == "M" || valor == "K" || valor == "B" {
+					cmd.Unit = valor
+				} else {
+					fmt.Println("Error: El valor del parametro unit es incorrecto")
+					continue
+				}
+
+			} else if strings.ToLower(comando[i]) == "-path" {
+
+				cmd.Path = comando[i+1]
+
+			} else if strings.ToLower(comando[i]) == "-type" {
+
+				valor := strings.ToUpper(comando[i+1])
+
+				if valor == "P" || valor == "E" || valor == "L" {
+					cmd.Fit = valor
+				} else {
+					fmt.Println("Error: El valor del parametro type es incorrecto")
+					continue
+				}
+
+			} else if strings.ToLower(comando[i]) == "-fit" {
+
+				valor := strings.ToUpper(comando[i+1])
+
+				if valor == "FF" || valor == "WF" || valor == "BF" {
+					cmd.Fit = valor
+				} else {
+					fmt.Println("Error: El valor del parametro fit es incorrecto")
+					continue
+				}
+
+			} else if strings.ToLower(comando[i]) == "-name" {
+				cmd.Name = comando[i+1]
+			} else {
+				fmt.Println("Error: El comando exec no contiene el comando \"" + comando[i] + "\"")
+			}
+
+		}
+	}
+
+	cmd.Ejecutar()
 }

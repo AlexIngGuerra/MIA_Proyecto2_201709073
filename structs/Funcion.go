@@ -1,9 +1,12 @@
 package structs
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"os"
+	"unsafe"
 )
 
 func GetFit(Fit string) uint8 {
@@ -41,7 +44,26 @@ func GetFecha(Fecha string) [20]uint8 {
 	return retorno
 }
 
-//########## ARCHIVOS ####################
+func GetName(Name string) [20]uint8 {
+	var retorno [20]uint8
+	arreglo := []uint8(Name)
+	for i := 0; i < 20; i++ {
+		if i < len(arreglo) {
+			retorno[i] = arreglo[i]
+		} else {
+			retorno[i] = 0
+		}
+	}
+
+	return retorno
+}
+
+func GetType(Type string) uint8 {
+	arreglo := []uint8(Type)
+	return arreglo[0]
+}
+
+//########## ARCHIVOS  #############################
 
 func LeerArchivo(archivo *os.File, numero int) []byte {
 	bytes := make([]byte, numero)
@@ -64,4 +86,41 @@ func EscribirArchivo(archivo *os.File, bytes []byte) bool {
 		return false
 	}
 	return true
+}
+
+//############ DISCOS #############################
+
+func GetMbr(Path string) Mbr {
+	archivo, err := os.Open(Path)
+	defer archivo.Close()
+
+	archivo.Seek(0, 0)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var mbr Mbr
+
+	size := int(unsafe.Sizeof(mbr))
+	data := LeerArchivo(archivo, size)
+	buffer := bytes.NewBuffer(data)
+
+	err = binary.Read(buffer, binary.BigEndian, &mbr)
+	if err != nil {
+		fmt.Println("Error: No se ha podido leer el mbr del disco")
+		log.Fatal(err)
+	}
+
+	return mbr
+}
+
+func GetEspacioLibreMbr(mbr Mbr) int {
+	valor := int(mbr.Tamano)
+
+	for i := 0; i < 4; i++ {
+		valor -= int(mbr.Particion[i].Size)
+	}
+
+	return valor
 }

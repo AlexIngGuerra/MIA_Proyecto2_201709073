@@ -29,7 +29,8 @@ func (self Mkdisk) Ejecutar() {
 	}
 
 	self.crearCarpetaSiNoExiste(self.getDir(self.Path)) //Crear las carpetas
-	if self.crearArchivoSiNoExiste(self.Path) {         //Si se pudo crear el archivo se crea el disco
+	if self.crearArchivoSiNoExiste(self.Path) {
+		//Si se pudo crear el archivo se crea el disco
 		var mbr structs.Mbr
 		mbr.Tamano = structs.GetSize(self.Size, self.Unit)
 		mbr.Fit = structs.GetFit(self.Fit)
@@ -60,6 +61,7 @@ func (self Mkdisk) Ejecutar() {
 		var bufferCero bytes.Buffer
 		var cero [1024]uint8
 		binary.Write(&bufferCero, binary.BigEndian, &cero)
+
 		for i := 0; i < tamano; i++ {
 			discoCreado = structs.EscribirArchivo(archivo, bufferCero.Bytes())
 		}
