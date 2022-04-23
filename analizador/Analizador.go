@@ -203,7 +203,7 @@ func (self Analizador) cmdFdisk(comando []string) {
 				valor := strings.ToUpper(comando[i+1])
 
 				if valor == "P" || valor == "E" || valor == "L" {
-					cmd.Fit = valor
+					cmd.Type = valor
 				} else {
 					fmt.Println("Error: El valor del parametro type es incorrecto")
 					continue
@@ -222,6 +222,7 @@ func (self Analizador) cmdFdisk(comando []string) {
 
 			} else if strings.ToLower(comando[i]) == "-name" {
 				cmd.Name = comando[i+1]
+
 			} else {
 				fmt.Println("Error: El comando exec no contiene el comando \"" + comando[i] + "\"")
 			}

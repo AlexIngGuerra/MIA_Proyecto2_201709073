@@ -59,8 +59,22 @@ func GetName(Name string) [20]uint8 {
 }
 
 func GetType(Type string) uint8 {
-	arreglo := []uint8(Type)
-	return arreglo[0]
+	if Type == "P" {
+		return 'P'
+	} else if Type == "E" {
+		return 'E'
+	} else if Type == "L" {
+		return 'L'
+	}
+	return 0
+}
+
+func UintToString(arreglo [20]uint8) string {
+	cadena := ""
+	for i := 0; i < 20; i++ {
+		cadena += string(arreglo[i])
+	}
+	return cadena
 }
 
 //########## ARCHIVOS  #############################
@@ -94,12 +108,11 @@ func GetMbr(Path string) Mbr {
 	archivo, err := os.Open(Path)
 	defer archivo.Close()
 
-	archivo.Seek(0, 0)
-
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	archivo.Seek(0, 0)
 	var mbr Mbr
 
 	size := int(unsafe.Sizeof(mbr))
@@ -113,6 +126,18 @@ func GetMbr(Path string) Mbr {
 	}
 
 	return mbr
+}
+
+func GetEbr(archivo *os.File, Posicion int64) Ebr {
+	archivo.Seek(Posicion, 0)
+	var ebr Ebr
+
+	size := int(unsafe.Sizeof(ebr))
+	data := LeerArchivo(archivo, size)
+	buffer := bytes.NewBuffer(data)
+	binary.Read(buffer, binary.BigEndian, &ebr)
+
+	return ebr
 }
 
 func GetEspacioLibreMbr(mbr Mbr) int {
