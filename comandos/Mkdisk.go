@@ -28,8 +28,8 @@ func (self Mkdisk) Ejecutar() {
 		return
 	}
 
-	self.crearCarpetaSiNoExiste(self.getDir(self.Path)) //Crear las carpetas
-	if self.crearArchivoSiNoExiste(self.Path) {
+	self.CrearCarpetaSiNoExiste(self.GetDir(self.Path)) //Crear las carpetas
+	if self.CrearArchivoSiNoExiste(self.Path) {
 		//Si se pudo crear el archivo se crea el disco
 		var mbr structs.Mbr
 		mbr.Tamano = structs.GetSize(self.Size, self.Unit)
@@ -86,7 +86,7 @@ func (self Mkdisk) tieneErrores() bool {
 	return errores
 }
 
-func (self Mkdisk) getDir(Path string) string {
+func (self Mkdisk) GetDir(Path string) string {
 	cadena := strings.Split(Path, "/")
 	dir := cadena[0]
 	for i := 1; i < len(cadena)-1; i++ {
@@ -97,7 +97,7 @@ func (self Mkdisk) getDir(Path string) string {
 	return dir
 }
 
-func (self Mkdisk) crearCarpetaSiNoExiste(Path string) {
+func (self Mkdisk) CrearCarpetaSiNoExiste(Path string) {
 	_, err := os.Stat(Path)
 	if os.IsNotExist(err) {
 		fmt.Println("Aviso: La carpeta o carpetas no existen, se procede a crearlas.")
@@ -108,7 +108,7 @@ func (self Mkdisk) crearCarpetaSiNoExiste(Path string) {
 	}
 }
 
-func (self Mkdisk) crearArchivoSiNoExiste(Path string) bool {
+func (self Mkdisk) CrearArchivoSiNoExiste(Path string) bool {
 	if _, err := os.Stat(Path); os.IsNotExist(err) {
 		archivo, err := os.Create(Path)
 		defer archivo.Close()

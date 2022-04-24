@@ -47,10 +47,28 @@ func (self Fdisk) Ejecutar() {
 
 func (self Fdisk) tieneErrores() bool {
 	errores := false
+	if self.Size <= 0 {
+		errores = true
+		fmt.Println("Error: El size tiene que ser mayor a cer")
+	}
+
+	if self.Path == "" {
+		errores = true
+		fmt.Println("Error: El parametro -path es obligatorio")
+	}
+
+	if self.Name == "" {
+		errores = true
+		fmt.Println("Error: El parametro -name es obligatorio")
+	}
+
 	return errores
 }
 
 func (self Fdisk) crearParticionPrimaria(mbr structs.Mbr) {
+	if self.tieneErroresParticionPrimExt(mbr) {
+		return
+	}
 
 	archivo, err := os.OpenFile(self.Path, os.O_RDWR, 0777)
 	defer archivo.Close()
@@ -75,21 +93,13 @@ func (self Fdisk) crearParticionPrimaria(mbr structs.Mbr) {
 			break
 		}
 	}
+	particionCreada := false
+	ebrNuloCreado := true
 
 	archivo.Seek(0, 0)
 	var buffer bytes.Buffer
 	binary.Write(&buffer, binary.BigEndian, &mbr)
-	structs.EscribirArchivo(archivo, buffer.Bytes())
-
-	for i := 0; i < 4; i++ {
-		fmt.Println("###############################")
-		fmt.Println(structs.UintToString(mbr.Particion[i].Name))
-		fmt.Println(mbr.Particion[i].Size)
-		fmt.Println(mbr.Particion[i].Start)
-		fmt.Println(string(mbr.Particion[i].Fit))
-		fmt.Println(string(mbr.Particion[i].Type))
-		fmt.Println("###############################")
-	}
+	particionCreada = structs.EscribirArchivo(archivo, buffer.Bytes())
 
 	if particion.Type == 'E' {
 		var ebrNull structs.Ebr
@@ -98,13 +108,52 @@ func (self Fdisk) crearParticionPrimaria(mbr structs.Mbr) {
 		archivo.Seek(particion.Start, 0)
 		var buffer bytes.Buffer
 		binary.Write(&buffer, binary.BigEndian, &ebrNull)
-		structs.EscribirArchivo(archivo, buffer.Bytes())
+		ebrNuloCreado = structs.EscribirArchivo(archivo, buffer.Bytes())
+	}
+
+	if particionCreada && ebrNuloCreado {
+		fmt.Println("Se ha creado la particion: " + self.Name)
 	}
 
 }
 
 func (self Fdisk) tieneErroresParticionPrimExt(mbr structs.Mbr) bool {
 	errores := false
+	//Revisar Nombre
+	if self.nombreRepetido(mbr) {
+		errores = true
+		fmt.Println("Error: El Nombre de la particion esta repetido")
+	}
+
+	//Revisar espacio y si hay espacio libre para crear la particion
+	espacioLibre := mbr.Tamano - 1
+	libreParticion := false
+	existeExtendida := false
+	for i := 0; i < 4; i++ {
+		espacioLibre -= mbr.Particion[i].Size
+		if mbr.Particion[i].Size == 0 {
+			libreParticion = true
+		}
+
+		if mbr.Particion[i].Type == 'E' {
+			existeExtendida = true
+		}
+	}
+
+	if espacioLibre < structs.GetSize(self.Size, self.Unit) {
+		errores = true
+		fmt.Println("Error: No hay suficiente espacio en el disco para crear la particion")
+	}
+
+	if !libreParticion {
+		errores = true
+		fmt.Println("Error: El máximo de particiones no logicas es de 4")
+	}
+
+	if existeExtendida && self.Type == "E" {
+		errores = true
+		fmt.Println("Error: Solo puede existir una sola particion extendida")
+	}
 
 	return errores
 }
@@ -118,6 +167,9 @@ func (self Fdisk) getStartPrimaria(mbr structs.Mbr) int64 {
 }
 
 func (self Fdisk) crearParticionLogica(mbr structs.Mbr) {
+	if self.tieneErroresParticionLogica(mbr) {
+		return
+	}
 
 	archivo, err := os.OpenFile(self.Path, os.O_RDWR, 0777)
 	defer archivo.Close()
@@ -151,22 +203,115 @@ func (self Fdisk) crearParticionLogica(mbr structs.Mbr) {
 	ebr.Name = structs.GetName(self.Name)
 	ebr.Next = ebr.Start + ebr.Size
 
-	fmt.Println("###############################")
-	fmt.Println(structs.UintToString(ebr.Name))
-	fmt.Println(ebr.Start)
-	fmt.Println(unsafe.Sizeof(ebr))
-	fmt.Println(ebr.Size)
-	fmt.Println(string(ebr.Fit))
-	fmt.Println("###############################")
+	//Creamos el Ebr de la particion
+	particionCreada := false
 
 	archivo.Seek(apuntador, 0)
 	var buffer bytes.Buffer
 	binary.Write(&buffer, binary.BigEndian, &ebr)
-	structs.EscribirArchivo(archivo, buffer.Bytes())
+	particionCreada = structs.EscribirArchivo(archivo, buffer.Bytes())
+
+	//Creamos el Ebr nulo para verificar la finalizacion
+	apuntador = ebr.Next
+	ebrNuloCreado := false
+
+	var ebrNull structs.Ebr
+	ebrNull.Name = structs.GetName("EBRNULO")
+
+	archivo.Seek(apuntador, 0)
+	var buffer2 bytes.Buffer
+	binary.Write(&buffer2, binary.BigEndian, &ebrNull)
+	ebrNuloCreado = structs.EscribirArchivo(archivo, buffer2.Bytes())
+
+	if particionCreada && ebrNuloCreado {
+		fmt.Println("Se ha creado la particion logica: " + self.Name)
+	}
 
 }
 
 func (self Fdisk) tieneErroresParticionLogica(mbr structs.Mbr) bool {
+	archivo, err := os.OpenFile(self.Path, os.O_RDWR, 0777)
+	defer archivo.Close()
+	if err != nil {
+		fmt.Println("Error: No se ha podido abrir el archivo")
+		log.Fatal(err)
+	}
+
 	errores := false
+	//Revisar que el nombre no este repetido
+	if self.nombreRepetido(mbr) {
+		errores = true
+		fmt.Println("Error: El Nombre de la particion esta repetido")
+	}
+
+	//Existe Particion Extendida
+	pos := -1
+	for i := 0; i < 4; i++ {
+		if mbr.Particion[i].Type == 'E' {
+			pos = i
+			break
+		}
+	}
+
+	if pos == -1 {
+		errores = true
+		fmt.Println("Error: No existe la particion extendida")
+
+		// Si hay espacio suficiente para crear la particion
+	} else {
+		espacioLibre := mbr.Particion[pos].Start + mbr.Particion[pos].Size
+		apuntador := mbr.Particion[pos].Start
+		ebrActual := structs.GetEbr(archivo, apuntador)
+		for ebrActual.Next != 0 {
+			apuntador = ebrActual.Next
+			ebrActual = structs.GetEbr(archivo, apuntador)
+		}
+		espacioLibre -= ebrActual.Start
+		espacioLibre -= int64(unsafe.Sizeof(ebrActual))
+
+		if espacioLibre < structs.GetSize(self.Size, self.Unit) {
+			errores = true
+			fmt.Println("Error: No hay suficiente espacio en la particion extendida")
+		}
+	}
+
 	return errores
+}
+
+func (self Fdisk) nombreRepetido(mbr structs.Mbr) bool {
+	archivo, err := os.OpenFile(self.Path, os.O_RDWR, 0777)
+	defer archivo.Close()
+
+	if err != nil {
+		fmt.Println("Error: No se ha podido abrir el archivo")
+		log.Fatal(err)
+	}
+
+	nombre := structs.GetName(self.Name)
+
+	for i := 0; i < 4; i++ {
+		if mbr.Particion[i].Name == nombre {
+			return true
+		}
+
+		if mbr.Particion[i].Type == 'E' {
+			apuntador := mbr.Particion[i].Start
+			ebrActual := structs.GetEbr(archivo, apuntador)
+
+			if ebrActual.Name == nombre {
+				return true
+			}
+
+			for ebrActual.Next != 0 {
+				apuntador = ebrActual.Next
+				ebrActual = structs.GetEbr(archivo, apuntador)
+
+				if ebrActual.Name == nombre {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }

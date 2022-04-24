@@ -109,6 +109,7 @@ func GetMbr(Path string) Mbr {
 	defer archivo.Close()
 
 	if err != nil {
+		fmt.Println("Error: No se pudo abrir el archivo")
 		log.Fatal(err)
 	}
 

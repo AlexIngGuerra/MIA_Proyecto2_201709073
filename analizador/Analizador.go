@@ -42,6 +42,10 @@ func (self Analizador) Analizar(entrada string) {
 
 			} else if strings.ToLower(comando[0]) == "fdisk" {
 				self.cmdFdisk(comando)
+
+			} else if strings.ToLower(comando[0]) == "mount" {
+				self.cmdMount(comando)
+
 			}
 
 		}
@@ -223,6 +227,26 @@ func (self Analizador) cmdFdisk(comando []string) {
 			} else if strings.ToLower(comando[i]) == "-name" {
 				cmd.Name = comando[i+1]
 
+			} else {
+				fmt.Println("Error: El comando exec no contiene el comando \"" + comando[i] + "\"")
+			}
+
+		}
+	}
+
+	cmd.Ejecutar()
+}
+
+func (self Analizador) cmdMount(comando []string) {
+	cmd := comandos.NewMount()
+
+	for i := 1; i < len(comando); i++ {
+		if i%2 != 0 && (i+1) < len(comando) {
+
+			if strings.ToLower(comando[i]) == "-path" {
+				cmd.Path = comando[i+1]
+			} else if strings.ToLower(comando[i]) == "-name" {
+				cmd.Name = comando[i+1]
 			} else {
 				fmt.Println("Error: El comando exec no contiene el comando \"" + comando[i] + "\"")
 			}
