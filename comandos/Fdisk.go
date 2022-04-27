@@ -49,7 +49,7 @@ func (self Fdisk) tieneErrores() bool {
 	errores := false
 	if self.Size <= 0 {
 		errores = true
-		fmt.Println("Error: El size tiene que ser mayor a cer")
+		fmt.Println("Error: El size tiene que ser mayor a cero")
 	}
 
 	if self.Path == "" {

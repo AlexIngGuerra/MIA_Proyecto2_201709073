@@ -1,9 +1,14 @@
 package comandos
 
 import (
+	"MIA/structs"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
-	"strings"
+	"os/exec"
+	"strconv"
+	"unsafe"
 )
 
 type Rep struct {
@@ -18,44 +23,156 @@ func NewRep() Rep {
 }
 
 func (self Rep) Ejecutar() {
-
-}
-
-func (self Rep) getDir(Path string) string {
-	cadena := strings.Split(Path, "/")
-	dir := cadena[0]
-	for i := 1; i < len(cadena)-1; i++ {
-		if i < len(cadena) {
-			dir = dir + "/" + cadena[i]
-		}
+	if self.tieneErrores() {
+		return
 	}
-	return dir
-}
 
-func (self Rep) crearCarpetaSiNoExiste(Path string) {
-	_, err := os.Stat(Path)
-	if os.IsNotExist(err) {
-		fmt.Println("Aviso: La carpeta o carpetas no existen, se procede a crearlas.")
-		err = os.MkdirAll(Path, 0777)
+	mount := self.getMount(self.Id)
+	if mount.Id == "" {
+		fmt.Println("Error: El id solicitado no corresponde a ninguna particion montada")
+		return
+	}
+
+	var Mkdisk Mkdisk
+	DotPath := Mkdisk.GetDir(self.Path) + "/reporte.dot"
+	Mkdisk.CrearCarpetaSiNoExiste(Mkdisk.GetDir(self.Path)) //Crear las carpetas
+	if Mkdisk.CrearArchivo(DotPath) {
+
+		if self.Name == "disk" {
+			self.repDisk(DotPath, mount)
+		}
+
+		cmd := exec.Command("dot", "-Tsvg", "-o", self.Path+".svg", DotPath)
+		_, err := cmd.Output()
 		if err != nil {
-			fmt.Println("Error: No se ha podido crear la carpeta.")
+			fmt.Println("Error: Dot no pudo generar el svg: ", err)
 		}
+
 	}
 }
 
-func (self Rep) crearArchivoSiNoExiste(Path string) bool {
-	if _, err := os.Stat(Path); os.IsNotExist(err) {
-		archivo, err := os.Create(Path)
-		defer archivo.Close()
-		if err != nil {
-			fmt.Println("Error: No se ha podido crear el archivo")
-		}
-		return true
+func (self Rep) tieneErrores() bool {
+	errores := false
+	if self.Path == "" {
+		errores = true
+		fmt.Println("Error: El parametro -path es obligatorio")
 	}
-	fmt.Println("Error: No se puede crear el disco porque el archivo ya existe.")
-	return false
+
+	if self.Name == "" {
+		errores = true
+		fmt.Println("Error: El parametro -name es obligatorio")
+	}
+
+	if self.Id == "" {
+		errores = true
+		fmt.Println("Error: El parametro -id es obligatorio")
+	}
+
+	return errores
 }
 
-func (self Rep) repDisk() {
+func (self Rep) getMount(Id string) ParticionMontada {
+	for i := 0; i < len(Montados); i++ {
+		if Montados[i].Id == Id {
+			return Montados[i]
+		}
+	}
+	return ParticionMontada{}
+}
 
+func (self Rep) repDisk(DotPath string, mount ParticionMontada) {
+	mbr := structs.GetMbr(mount.Path)
+	archivo, err := os.OpenFile(mount.Path, os.O_RDWR, 0777)
+	defer archivo.Close()
+
+	if err != nil {
+		fmt.Println("Error: No se ha podido abrir el archivo")
+		log.Fatal(err)
+	}
+
+	if mbr.Tamano <= 0 {
+		fmt.Println("Error: El Mbr no es funcional")
+		return
+	}
+
+	contenido := "digraph G {\n"
+	contenido = contenido + "node_A [shape=record    label=\"MBR"
+	porcentaje := float64(100)
+
+	for i := 0; i < 4; i++ {
+		particion := mbr.Particion[i]
+
+		if particion.Start > 0 {
+
+			if particion.Type == 'P' {
+				contenido += "|Particion Primaria"
+				numero := float64(particion.Size) / float64(mbr.Tamano) * 100
+				porcentaje = porcentaje - numero
+				var s string = strconv.FormatFloat(numero, 'f', 2, 64)
+				contenido = contenido + "\\n" + s + string('%') + " del disco"
+			}
+
+			if particion.Type == 'E' {
+				contenido += "|{Particion Extendida|{"
+				extPorcentaje := float64(particion.Size) / float64(mbr.Tamano) * 100
+
+				apuntador := mbr.Particion[i].Start
+				ebrActual := structs.GetEbr(archivo, apuntador)
+				if ebrActual.Size != 0 {
+					contenido = contenido + "EBR| Particion Logica"
+					numero := (float64(ebrActual.Size) + float64(unsafe.Sizeof(ebrActual))) / float64(mbr.Tamano) * 100
+					porcentaje = porcentaje - numero
+					extPorcentaje = extPorcentaje - numero
+					var s string = strconv.FormatFloat(numero, 'f', 2, 64)
+					contenido = contenido + "\\n" + s + string('%') + " del disco"
+				}
+
+				for ebrActual.Size != 0 {
+					apuntador = ebrActual.Next
+					ebrActual = structs.GetEbr(archivo, apuntador)
+					if ebrActual.Size != 0 {
+						contenido = contenido + "|EBR| Particion Logica"
+						numero := (float64(ebrActual.Size) + float64(unsafe.Sizeof(ebrActual))) / float64(mbr.Tamano) * 100
+						porcentaje = porcentaje - numero
+						extPorcentaje = extPorcentaje - numero
+						var s string = strconv.FormatFloat(numero, 'f', 2, 64)
+						contenido = contenido + "\\n" + s + string('%') + " del disco"
+					}
+				}
+
+				if extPorcentaje > 0 {
+					contenido += "|Libre"
+					var s string = strconv.FormatFloat(extPorcentaje, 'f', 2, 64)
+					contenido = contenido + "\\n" + s + string('%') + "del disco"
+					porcentaje = porcentaje - extPorcentaje
+				}
+
+				contenido += "}}"
+			}
+
+		}
+	}
+
+	if porcentaje > 0 {
+		contenido += "|Libre"
+		var s string = strconv.FormatFloat(porcentaje, 'f', 2, 64)
+		contenido = contenido + "\\n" + s + string('%') + "del disco"
+	}
+
+	contenido += "\"];\n"
+	contenido += "}"
+
+	archivo2, err := os.OpenFile(DotPath, os.O_RDWR, 0777)
+	if err != nil {
+		fmt.Println("Error: No se pudo abrir archivo")
+		return
+	}
+	defer archivo2.Close()
+
+	b := []byte(contenido)
+	err2 := ioutil.WriteFile(DotPath, b, 0777)
+	if err2 != nil {
+		fmt.Println("Error: Error al escribir el archivo")
+		return
+	}
 }

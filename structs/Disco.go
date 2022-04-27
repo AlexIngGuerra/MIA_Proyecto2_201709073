@@ -25,3 +25,8 @@ type Ebr struct {
 	Next   int64
 	Name   [20]uint8
 }
+
+type InfoPart struct {
+	Start int64
+	Size  int64
+}

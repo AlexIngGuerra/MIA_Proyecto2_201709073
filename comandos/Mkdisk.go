@@ -114,11 +114,22 @@ func (self Mkdisk) CrearArchivoSiNoExiste(Path string) bool {
 		defer archivo.Close()
 		if err != nil {
 			fmt.Println("Error: No se ha podido crear el archivo")
+			return false
 		}
 		return true
 	}
 	fmt.Println("Error: No se puede crear el disco porque el archivo ya existe.")
 	return false
+}
+
+func (self Mkdisk) CrearArchivo(Path string) bool {
+	archivo, err := os.Create(Path)
+	defer archivo.Close()
+	if err != nil {
+		fmt.Println("Error: No se ha podido crear el archivo")
+		return false
+	}
+	return true
 }
 
 func (self Mkdisk) EjecutarRmdisk() {

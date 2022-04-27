@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"unsafe"
 )
@@ -149,4 +150,18 @@ func GetEspacioLibreMbr(mbr Mbr) int {
 	}
 
 	return valor
+}
+
+//############ ARCHIVOS #############################
+
+func GetN(Size int64) int64 {
+	espacio := Size - int64(unsafe.Sizeof(SuperBloque{}))
+	valorN := 1 + 3 + unsafe.Sizeof(Inodo{}) + 3*64
+	return int64(math.Floor(float64(valorN) / float64(espacio)))
+}
+
+func GetParticion(Name [20]uint8, mbr Mbr) InfoPart {
+	var info InfoPart
+
+	return info
 }
