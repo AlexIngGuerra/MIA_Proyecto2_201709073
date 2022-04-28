@@ -85,7 +85,7 @@ func (self Fdisk) crearParticionPrimaria(mbr structs.Mbr) {
 	particion.Name = structs.GetName(self.Name)
 	particion.Type = structs.GetType(self.Type)
 	particion.Status = '0'
-	particion.Start = self.getStartPrimaria(mbr)
+	particion.Start = self.getStartPrimaria(mbr) + 1
 
 	for i := 0; i < 4; i++ {
 		if mbr.Particion[i].Size == 0 {
@@ -198,7 +198,7 @@ func (self Fdisk) crearParticionLogica(mbr structs.Mbr) {
 	var ebr structs.Ebr
 	ebr.Status = '0'
 	ebr.Fit = structs.GetFit(self.Fit)
-	ebr.Start = apuntador + int64(unsafe.Sizeof(ebr))
+	ebr.Start = apuntador + int64(unsafe.Sizeof(ebr)) + 1
 	ebr.Size = structs.GetSize(self.Size, self.Unit)
 	ebr.Name = structs.GetName(self.Name)
 	ebr.Next = ebr.Start + ebr.Size

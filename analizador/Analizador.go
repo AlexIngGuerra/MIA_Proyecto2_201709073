@@ -48,6 +48,10 @@ func (self Analizador) Analizar(entrada string) {
 
 			} else if strings.ToLower(comando[0]) == "rep" {
 				self.cmdRep(comando)
+
+			} else if strings.ToLower(comando[0]) == "mkfs" {
+				self.cmdMkfs(comando)
+
 			}
 
 		}
@@ -276,6 +280,32 @@ func (self Analizador) cmdRep(comando []string) {
 
 			} else if strings.ToLower(comando[i]) == "-ruta" {
 				cmd.Ruta = comando[i+1]
+
+			} else {
+				fmt.Println("Error: El comando exec no contiene el comando \"" + comando[i] + "\"")
+			}
+		}
+	}
+
+	cmd.Ejecutar()
+}
+
+func (self Analizador) cmdMkfs(comando []string) {
+	cmd := comandos.NewMkfs()
+
+	for i := 1; i < len(comando); i++ {
+		if i%2 != 0 && (i+1) < len(comando) {
+			if strings.ToLower(comando[i]) == "-id" {
+				cmd.Id = comando[i+1]
+
+			} else if strings.ToLower(comando[i]) == "-type" {
+
+				valor := strings.ToLower(comando[i+1])
+				if valor == "fast" || valor == "full" {
+					cmd.Type = valor
+				} else {
+					fmt.Println("Error: El comando type solo puede recibir como valor fast y full")
+				}
 
 			} else {
 				fmt.Println("Error: El comando exec no contiene el comando \"" + comando[i] + "\"")

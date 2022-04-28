@@ -5,8 +5,9 @@ type SuperBloque struct {
 	Inodes_count      int32
 	Blocks_count      int32
 	Free_blocks_count int32
-	Free_inodes_coutn int32
+	Free_inodes_count int32
 	Mtime             [20]uint8
+	Magic             int32
 	Mnt_count         int32
 	Inode_Size        int32
 	Block_Size        int32

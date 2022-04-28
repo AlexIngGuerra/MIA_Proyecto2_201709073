@@ -27,7 +27,7 @@ func (self Rep) Ejecutar() {
 		return
 	}
 
-	mount := self.getMount(self.Id)
+	mount := GetMount(self.Id)
 	if mount.Id == "" {
 		fmt.Println("Error: El id solicitado no corresponde a ninguna particion montada")
 		return
@@ -71,7 +71,7 @@ func (self Rep) tieneErrores() bool {
 	return errores
 }
 
-func (self Rep) getMount(Id string) ParticionMontada {
+func GetMount(Id string) ParticionMontada {
 	for i := 0; i < len(Montados); i++ {
 		if Montados[i].Id == Id {
 			return Montados[i]

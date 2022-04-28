@@ -154,14 +154,40 @@ func GetEspacioLibreMbr(mbr Mbr) int {
 
 //############ ARCHIVOS #############################
 
-func GetN(Size int64) int64 {
-	espacio := Size - int64(unsafe.Sizeof(SuperBloque{}))
-	valorN := 1 + 3 + unsafe.Sizeof(Inodo{}) + 3*64
-	return int64(math.Floor(float64(valorN) / float64(espacio)))
+func GetN(Size int64) int32 {
+	SB := float64(unsafe.Sizeof(SuperBloque{}))
+	IN := float64(unsafe.Sizeof(Inodo{}))
+	T := float64(Size - 1)
+	N := (T - SB) / (196 + IN)
+	result := math.Floor(N)
+	return int32(result)
 }
 
-func GetParticion(Name [20]uint8, mbr Mbr) InfoPart {
+func GetParticion(Name [20]uint8, mbr Mbr, archivo *os.File) InfoPart {
 	var info InfoPart
+
+	for i := 0; i < 4; i++ {
+		part := mbr.Particion[i]
+		if Name == part.Name && part.Type != 'E' {
+			info.Size = part.Size
+			info.Start = part.Start
+		}
+
+		if part.Type == 'E' {
+			apuntador := mbr.Particion[i].Start
+			ebrActual := GetEbr(archivo, apuntador)
+
+			for ebrActual.Next != 0 {
+				if ebrActual.Name == Name {
+					info.Size = ebrActual.Size
+					info.Start = ebrActual.Start
+				}
+				apuntador = ebrActual.Next
+				ebrActual = GetEbr(archivo, apuntador)
+			}
+
+		}
+	}
 
 	return info
 }

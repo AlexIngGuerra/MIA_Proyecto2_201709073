@@ -60,6 +60,10 @@ func (self Mkdisk) Ejecutar() {
 		//Llenar de cero el archivo binario
 		var bufferCero bytes.Buffer
 		var cero [1024]uint8
+
+		for i := 0; i < len(cero); i++ {
+			cero[i] = '0'
+		}
 		binary.Write(&bufferCero, binary.BigEndian, &cero)
 
 		for i := 0; i < tamano; i++ {
