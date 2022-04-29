@@ -43,3 +43,15 @@ type Contenido struct {
 type BloqueArchivo struct {
 	Contenido [64]uint8
 }
+
+type Grupo struct {
+	Id    int
+	Name  string
+	Users []Usuario
+}
+
+type Usuario struct {
+	Id       int
+	User     string
+	Password string
+}

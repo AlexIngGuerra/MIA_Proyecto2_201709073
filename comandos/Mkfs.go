@@ -2,6 +2,8 @@ package comandos
 
 import (
 	"MIA/structs"
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"os"
 	"time"
@@ -59,12 +61,14 @@ func (self Mkfs) formateoFull(mount ParticionMontada) {
 
 	mbr := structs.GetMbr(mount.Path)
 	part := structs.GetParticion(mount.Name, mbr, archivo)
-	//n := structs.GetN(part.Size)
-	//apuntador := part.Start + int64(unsafe.Sizeof(structs.SuperBloque{})) //Lo dejamos al inicio del bitmap bloques
-	// apuntador = apuntador +1
-	//superBloque := self.GenerarSuperBloque(n, apuntador)
-	fmt.Println(part.Start)
-	fmt.Println(part.Size)
+	n := structs.GetN(part.Size)
+	apuntador := part.Start + int64(unsafe.Sizeof(structs.SuperBloque{})) //Lo dejamos al inicio del bitmap bloques
+	apuntador = apuntador + 1
+	superBloque := self.GenerarSuperBloque(n, apuntador)
+	fmt.Println(apuntador)
+	fmt.Println(superBloque.Inode_Size)
+
+	self.crearUsuarioRoot(archivo)
 }
 
 //Formateo que solo limpia los bitmaps
@@ -103,14 +107,23 @@ func (self Mkfs) GenerarSuperBloque(n int32, apuntador int64) structs.SuperBloqu
 
 }
 
-func (self Mkdisk) limpiarBitmaps() {
+func (self Mkdisk) limpiarEspacioDisco(archivo *os.File, inicio int64, size int64) {
 	var cero uint8
 	cero = '0'
-	fmt.Println(cero)
+
+	var buffer bytes.Buffer
+	binary.Write(&buffer, binary.BigEndian, &cero)
+	archivo.Seek(inicio, 0)
+	for i := int64(0); i < size; i++ {
+		structs.EscribirArchivo(archivo, buffer.Bytes())
+	}
+
 }
 
-func (self Mkdisk) limiparDiscoEntero(archivo *os.File, partStart int64, size int64) {
-	var cero uint8
-	cero = '0'
-	fmt.Println(cero)
+func (self Mkfs) crearUsuarioRoot(archivo *os.File) {
+	root := "1, G, root\n1, U, root, root, 123\n"
+	bloques := structs.EscribirBloqueArchivo((root))
+	contenido := structs.LeerBloquesArchivo(bloques)
+	grupos := structs.GetGruposYUsuarios(contenido)
+	fmt.Println(grupos)
 }
