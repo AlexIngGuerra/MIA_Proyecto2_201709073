@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 	"unsafe"
 )
@@ -19,6 +20,7 @@ func NewMkfs() Mkfs {
 	return Mkfs{Id: "", Type: "full"}
 }
 
+//EJECUTAR EL COMANDO
 func (self Mkfs) Ejecutar() {
 	fmt.Println("Ejecutando mkfs")
 	if self.tieneErrores() {
@@ -39,6 +41,7 @@ func (self Mkfs) Ejecutar() {
 	fmt.Print("\n")
 }
 
+//VERIFICAR ERRORES DE PARAMETROS Y OTROS
 func (self Mkfs) tieneErrores() bool {
 	errores := false
 	if self.Id == "" {
@@ -49,7 +52,7 @@ func (self Mkfs) tieneErrores() bool {
 	return errores
 }
 
-//Formateo limpia todo el disco
+//FORMATEO FULL, LIMPIA TODO EL DISCO
 func (self Mkfs) formateoFull(mount ParticionMontada) {
 
 	archivo, err := os.OpenFile(mount.Path, os.O_RDWR, 0777)
@@ -62,21 +65,22 @@ func (self Mkfs) formateoFull(mount ParticionMontada) {
 	mbr := structs.GetMbr(mount.Path)
 	part := structs.GetParticion(mount.Name, mbr, archivo)
 	n := structs.GetN(part.Size)
-	apuntador := part.Start + int64(unsafe.Sizeof(structs.SuperBloque{})) //Lo dejamos al inicio del bitmap bloques
-	apuntador = apuntador + 1
-	superBloque := self.GenerarSuperBloque(n, apuntador)
-	fmt.Println(apuntador)
-	fmt.Println(superBloque.Inode_Size)
 
-	self.crearUsuarioRoot(archivo)
+	fmt.Println("Inicio: " + strconv.Itoa(int(part.Start)) + " , Size: " + strconv.Itoa(int(part.Size)))
+
+	superBloque := self.GenerarSuperBloque(n, part.Start)
+	self.limpiarEspacioDisco(archivo, part.Start, part.Size)
+
+	//Creamos el usuario root
+	self.crearUsuarioRoot(archivo, superBloque, n, part.Start)
 }
 
-//Formateo que solo limpia los bitmaps
+//FORMATEO FAST, LIMPIA SOLAMENTE LOS BITMAPS
 func (self Mkfs) formateoFast(mount ParticionMontada) {
-
 }
 
-func (self Mkfs) GenerarSuperBloque(n int32, apuntador int64) structs.SuperBloque {
+//GENERAR UN SUPERBLOQUE DEFAULT
+func (self Mkfs) GenerarSuperBloque(n int32, inicioPart int64) structs.SuperBloque {
 	var superBloque structs.SuperBloque
 
 	superBloque.FileSystem_Type = 2
@@ -95,35 +99,89 @@ func (self Mkfs) GenerarSuperBloque(n int32, apuntador int64) structs.SuperBloqu
 	superBloque.Inode_Size = int32(unsafe.Sizeof(structs.Inodo{}))
 	superBloque.Block_Size = 64
 	//INICIO DE STRUCTS
-	superBloque.Bm_block_start = apuntador
-	superBloque.Bm_inode_start = apuntador + 3*int64(n) + 1
-	superBloque.Block_start = apuntador + 3*int64(n) + int64(n) + 1
-	superBloque.Inode_start = apuntador + 3*int64(n) + int64(n) + 3*int64(n)*64 + 1
+	superBloque.Bm_block_start = inicioPart + int64(unsafe.Sizeof(superBloque))
+	superBloque.Bm_inode_start = superBloque.Bm_block_start + 3*int64(n)
+	superBloque.Block_start = superBloque.Bm_inode_start + int64(n)
+	superBloque.Inode_start = superBloque.Block_start + 3*int64(n)*int64(64)
 	//PRIMEROS LIBRES
 	superBloque.First_bloc = superBloque.Block_start
 	superBloque.First_ino = superBloque.Inode_start
 
 	return superBloque
-
 }
 
-func (self Mkdisk) limpiarEspacioDisco(archivo *os.File, inicio int64, size int64) {
+//LIMPIAR UN ESPACIO DE DISCO CON CERO
+func (self Mkfs) limpiarEspacioDisco(archivo *os.File, inicio int64, size int32) {
 	var cero uint8
-	cero = '0'
+	cero = 0
 
-	var buffer bytes.Buffer
-	binary.Write(&buffer, binary.BigEndian, &cero)
 	archivo.Seek(inicio, 0)
-	for i := int64(0); i < size; i++ {
+	buffer := bytes.Buffer{}
+	binary.Write(&buffer, binary.BigEndian, &cero)
+	for i := int32(0); i < size; i++ {
 		structs.EscribirArchivo(archivo, buffer.Bytes())
 	}
-
 }
 
-func (self Mkfs) crearUsuarioRoot(archivo *os.File) {
+//GENERAR LA CARPETA Y ARCHIVO USERS.TXT PARA LOS USUARIOS
+func (self Mkfs) crearUsuarioRoot(archivo *os.File, superbloque structs.SuperBloque, n int32, partStart int64) {
+	self.imprimirSB(superbloque, n)
+
+	//Paso 1: Generar Inodo Raiz "/"
+	inodoR := structs.NewInodo(1, 1, 0) //User:1, Grupo:1, Tipo:0
+	inodoU := structs.NewInodo(1, 1, 1) //User:1, Grupo:1, Tipo:1
+
+	bloqueC := structs.NewPrimerBloqueCarpeta(0, 0)
+	bloqueC.Contenido[2] = structs.Contenido{Name: structs.GetNameBloque("users.txt"), Apuntador: 1}
+	inodoR.Block[0] = 0
+
 	root := "1, G, root\n1, U, root, root, 123\n"
-	bloques := structs.EscribirBloqueArchivo((root))
-	contenido := structs.LeerBloquesArchivo(bloques)
-	grupos := structs.GetGruposYUsuarios(contenido)
-	fmt.Println(grupos)
+	bloquesA := structs.EscribirTextoEnBloques(root)
+	inodoU.Block[0] = 1
+
+	superbloque = structs.EscribirInodo(archivo, superbloque, inodoR, n)
+	superbloque = structs.EscribirInodo(archivo, superbloque, inodoU, n)
+	superbloque = structs.EscribirBloqueC(archivo, superbloque, bloqueC, n)
+	superbloque = structs.EscribirBloqueA(archivo, superbloque, bloquesA[0], n)
+
+	structs.EscribirSuperBloque(archivo, superbloque, partStart)
+
+	self.imprimirSB(superbloque, n)
+}
+
+func (self Mkfs) imprimirSB(sb structs.SuperBloque, n int32) {
+	fmt.Print("N: ")
+	fmt.Println(n)
+
+	fmt.Print("InodesCount: ")
+	fmt.Println(sb.Inodes_count)
+
+	fmt.Print("BlockCount: ")
+	fmt.Println(sb.Blocks_count)
+
+	fmt.Print("FreeInodes: ")
+	fmt.Println(sb.Free_inodes_count)
+
+	fmt.Print("FreeBlocks: ")
+	fmt.Println(sb.Free_blocks_count)
+
+	fmt.Print("FirstInode: ")
+	fmt.Println(sb.First_ino)
+
+	fmt.Print("FirsBlock: ")
+	fmt.Println(sb.First_bloc)
+
+	fmt.Print("bmInodeStart: ")
+	fmt.Println(sb.Bm_inode_start)
+
+	fmt.Print("bmBloqueStart: ")
+	fmt.Println(sb.Bm_block_start)
+
+	fmt.Print("InodeStart: ")
+	fmt.Println(sb.Inode_start)
+
+	fmt.Print("BlockStart: ")
+	fmt.Println(sb.Block_start)
+
+	fmt.Print("\n")
 }

@@ -10,6 +10,7 @@ import (
 	"unsafe"
 )
 
+//OBTENER EL FIT
 func GetFit(Fit string) uint8 {
 	if Fit == "FF" {
 		return 'F'
@@ -21,17 +22,19 @@ func GetFit(Fit string) uint8 {
 	return 0
 }
 
-func GetSize(Size int, Unit string) int64 {
+//OBTENER EL TAMAÑO EN BASE A UNA UNIDAD DE MEDIDA
+func GetSize(Size int, Unit string) int32 {
 	if Unit == "M" {
-		return int64(Size * 1024 * 1024)
+		return int32(Size * 1024 * 1024)
 	} else if Unit == "K" {
-		return int64(Size * 1024)
+		return int32(Size * 1024)
 	} else if Unit == "B" {
-		return int64(Size)
+		return int32(Size)
 	}
 	return 0
 }
 
+//OBTENER LA FECHA COMO ARREGLO
 func GetFecha(Fecha string) [20]uint8 {
 	arreglo := []uint8(Fecha)
 	var retorno [20]uint8
@@ -45,6 +48,7 @@ func GetFecha(Fecha string) [20]uint8 {
 	return retorno
 }
 
+//OBTENER EL NOMBRE COMO ARREGLO UINT
 func GetName(Name string) [20]uint8 {
 	var retorno [20]uint8
 	arreglo := []uint8(Name)
@@ -59,6 +63,7 @@ func GetName(Name string) [20]uint8 {
 	return retorno
 }
 
+//OBTENER EL TIPO COMO UINT
 func GetType(Type string) uint8 {
 	if Type == "P" {
 		return 'P'
@@ -70,6 +75,7 @@ func GetType(Type string) uint8 {
 	return 0
 }
 
+//PASAR DE UINT A STRING
 func UintToString(arreglo [20]uint8) string {
 	cadena := ""
 	for i := 0; i < 20; i++ {
@@ -80,6 +86,7 @@ func UintToString(arreglo [20]uint8) string {
 
 //########## ARCHIVOS  #############################
 
+//LEER EL ARCHIVO EN UN TAMAÑO ESPECIFICO
 func LeerArchivo(archivo *os.File, numero int) []byte {
 	bytes := make([]byte, numero)
 
@@ -92,6 +99,7 @@ func LeerArchivo(archivo *os.File, numero int) []byte {
 	return bytes
 }
 
+//ESCRIBIR EN EL ARCHIVO
 func EscribirArchivo(archivo *os.File, bytes []byte) bool {
 	_, err := archivo.Write(bytes)
 
@@ -105,6 +113,7 @@ func EscribirArchivo(archivo *os.File, bytes []byte) bool {
 
 //############ DISCOS #############################
 
+//OBTENER EL MBR DE UN ARCHIVO
 func GetMbr(Path string) Mbr {
 	archivo, err := os.Open(Path)
 	defer archivo.Close()
@@ -130,6 +139,7 @@ func GetMbr(Path string) Mbr {
 	return mbr
 }
 
+//OBTENER EL EBR DE UN ARCHIVO
 func GetEbr(archivo *os.File, Posicion int64) Ebr {
 	archivo.Seek(Posicion, 0)
 	var ebr Ebr
@@ -142,8 +152,9 @@ func GetEbr(archivo *os.File, Posicion int64) Ebr {
 	return ebr
 }
 
+//OBTENER EL ESPACIO LIBRE DE UN MBR
 func GetEspacioLibreMbr(mbr Mbr) int {
-	valor := int(mbr.Tamano)
+	valor := int(mbr.Size)
 
 	for i := 0; i < 4; i++ {
 		valor -= int(mbr.Particion[i].Size)
@@ -154,7 +165,8 @@ func GetEspacioLibreMbr(mbr Mbr) int {
 
 //############ ARCHIVOS #############################
 
-func GetN(Size int64) int32 {
+//OBTENER EL VALOR N PARA EL MANEJO DE ARCHIVOSS
+func GetN(Size int32) int32 {
 	SB := float64(unsafe.Sizeof(SuperBloque{}))
 	IN := float64(unsafe.Sizeof(Inodo{}))
 	T := float64(Size - 1)
@@ -163,10 +175,12 @@ func GetN(Size int64) int32 {
 	return int32(result)
 }
 
+//OBTENER LA INFORMACION DE LA PARTICION
 func GetParticion(Name [20]uint8, mbr Mbr, archivo *os.File) InfoPart {
 	var info InfoPart
 
 	for i := 0; i < 4; i++ {
+
 		part := mbr.Particion[i]
 		if Name == part.Name && part.Type != 'E' {
 			info.Size = part.Size

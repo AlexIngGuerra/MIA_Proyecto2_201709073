@@ -22,6 +22,7 @@ func NewRep() Rep {
 	return Rep{Name: "", Path: "", Id: "", Ruta: ""}
 }
 
+//EJECUTAR EL COMANDO
 func (self Rep) Ejecutar() {
 	if self.tieneErrores() {
 		return
@@ -47,10 +48,12 @@ func (self Rep) Ejecutar() {
 		if err != nil {
 			fmt.Println("Error: Dot no pudo generar el svg: ", err)
 		}
-
+		fmt.Println("Reporte Generado: " + self.Path + ".svg")
+		fmt.Print("\n")
 	}
 }
 
+//VERIFICAR ERRORES DE PARAMETROS Y OTROS
 func (self Rep) tieneErrores() bool {
 	errores := false
 	if self.Path == "" {
@@ -71,6 +74,7 @@ func (self Rep) tieneErrores() bool {
 	return errores
 }
 
+//OBTENER LA PARTICION MONTADA
 func GetMount(Id string) ParticionMontada {
 	for i := 0; i < len(Montados); i++ {
 		if Montados[i].Id == Id {
@@ -80,6 +84,7 @@ func GetMount(Id string) ParticionMontada {
 	return ParticionMontada{}
 }
 
+//GENERAR REPORTE DISK
 func (self Rep) repDisk(DotPath string, mount ParticionMontada) {
 	mbr := structs.GetMbr(mount.Path)
 	archivo, err := os.OpenFile(mount.Path, os.O_RDWR, 0777)
@@ -90,7 +95,7 @@ func (self Rep) repDisk(DotPath string, mount ParticionMontada) {
 		log.Fatal(err)
 	}
 
-	if mbr.Tamano <= 0 {
+	if mbr.Size <= 0 {
 		fmt.Println("Error: El Mbr no es funcional")
 		return
 	}
@@ -106,7 +111,7 @@ func (self Rep) repDisk(DotPath string, mount ParticionMontada) {
 
 			if particion.Type == 'P' {
 				contenido += "|Particion Primaria"
-				numero := float64(particion.Size) / float64(mbr.Tamano) * 100
+				numero := float64(particion.Size) / float64(mbr.Size) * 100
 				porcentaje = porcentaje - numero
 				var s string = strconv.FormatFloat(numero, 'f', 2, 64)
 				contenido = contenido + "\\n" + s + string('%') + " del disco"
@@ -114,13 +119,13 @@ func (self Rep) repDisk(DotPath string, mount ParticionMontada) {
 
 			if particion.Type == 'E' {
 				contenido += "|{Particion Extendida|{"
-				extPorcentaje := float64(particion.Size) / float64(mbr.Tamano) * 100
+				extPorcentaje := float64(particion.Size) / float64(mbr.Size) * 100
 
 				apuntador := mbr.Particion[i].Start
 				ebrActual := structs.GetEbr(archivo, apuntador)
 				if ebrActual.Size != 0 {
 					contenido = contenido + "EBR| Particion Logica"
-					numero := (float64(ebrActual.Size) + float64(unsafe.Sizeof(ebrActual))) / float64(mbr.Tamano) * 100
+					numero := (float64(ebrActual.Size) + float64(unsafe.Sizeof(ebrActual))) / float64(mbr.Size) * 100
 					porcentaje = porcentaje - numero
 					extPorcentaje = extPorcentaje - numero
 					var s string = strconv.FormatFloat(numero, 'f', 2, 64)
@@ -132,7 +137,7 @@ func (self Rep) repDisk(DotPath string, mount ParticionMontada) {
 					ebrActual = structs.GetEbr(archivo, apuntador)
 					if ebrActual.Size != 0 {
 						contenido = contenido + "|EBR| Particion Logica"
-						numero := (float64(ebrActual.Size) + float64(unsafe.Sizeof(ebrActual))) / float64(mbr.Tamano) * 100
+						numero := (float64(ebrActual.Size) + float64(unsafe.Sizeof(ebrActual))) / float64(mbr.Size) * 100
 						porcentaje = porcentaje - numero
 						extPorcentaje = extPorcentaje - numero
 						var s string = strconv.FormatFloat(numero, 'f', 2, 64)

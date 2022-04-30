@@ -23,15 +23,17 @@ func NewFdisk() Fdisk {
 	return Fdisk{Size: 0, Unit: "K", Path: "", Type: "P", Fit: "WF", Name: ""}
 }
 
+//EJECUTAR EL COMANDO
 func (self Fdisk) Ejecutar() {
 	if self.tieneErrores() {
 		return
 	}
+
 	//Buscamos el Mbr
 	var mbr structs.Mbr
 	mbr = structs.GetMbr(self.Path)
 
-	if mbr.Tamano <= 0 {
+	if mbr.Size <= 0 {
 		fmt.Println("Error: El Mbr no es funcional")
 		return
 	}
@@ -45,6 +47,7 @@ func (self Fdisk) Ejecutar() {
 	fmt.Print("\n")
 }
 
+//TIENE ERRORES EN LOS PARAMETROS
 func (self Fdisk) tieneErrores() bool {
 	errores := false
 	if self.Size <= 0 {
@@ -65,6 +68,7 @@ func (self Fdisk) tieneErrores() bool {
 	return errores
 }
 
+//CREAR PARTICION PRIMARIA O EXTENDIDA
 func (self Fdisk) crearParticionPrimaria(mbr structs.Mbr) {
 	if self.tieneErroresParticionPrimExt(mbr) {
 		return
@@ -85,7 +89,7 @@ func (self Fdisk) crearParticionPrimaria(mbr structs.Mbr) {
 	particion.Name = structs.GetName(self.Name)
 	particion.Type = structs.GetType(self.Type)
 	particion.Status = '0'
-	particion.Start = self.getStartPrimaria(mbr) + 1
+	particion.Start = self.getStartPrimaria(mbr)
 
 	for i := 0; i < 4; i++ {
 		if mbr.Particion[i].Size == 0 {
@@ -103,7 +107,7 @@ func (self Fdisk) crearParticionPrimaria(mbr structs.Mbr) {
 
 	if particion.Type == 'E' {
 		var ebrNull structs.Ebr
-		ebrNull.Name = structs.GetName("EBRNULO")
+		ebrNull.Name = structs.GetName("NULL")
 
 		archivo.Seek(particion.Start, 0)
 		var buffer bytes.Buffer
@@ -112,13 +116,34 @@ func (self Fdisk) crearParticionPrimaria(mbr structs.Mbr) {
 	}
 
 	if particionCreada && ebrNuloCreado {
-		fmt.Println("Se ha creado la particion: " + self.Name)
-	}
+		fmt.Println("----- PARTICION CREADA -----")
 
+		fmt.Print("Name: ")
+		fmt.Println(structs.UintToString(particion.Name))
+
+		fmt.Print("Status: ")
+		fmt.Println(string(particion.Status))
+
+		fmt.Print("Type: ")
+		fmt.Println(string(particion.Type))
+
+		fmt.Print("Fit: ")
+		fmt.Println(string(particion.Fit))
+
+		fmt.Print("Start: ")
+		fmt.Println(particion.Start)
+
+		fmt.Print("Size: ")
+		fmt.Println(particion.Size)
+		fmt.Println("----------------------------")
+
+	}
 }
 
+//VERIFICAR SI SE PUEDE CREAR LA PARTICION PRIMARIA O EXTENDIDA
 func (self Fdisk) tieneErroresParticionPrimExt(mbr structs.Mbr) bool {
 	errores := false
+
 	//Revisar Nombre
 	if self.nombreRepetido(mbr) {
 		errores = true
@@ -126,9 +151,10 @@ func (self Fdisk) tieneErroresParticionPrimExt(mbr structs.Mbr) bool {
 	}
 
 	//Revisar espacio y si hay espacio libre para crear la particion
-	espacioLibre := mbr.Tamano - 1
+	espacioLibre := mbr.Size
 	libreParticion := false
 	existeExtendida := false
+
 	for i := 0; i < 4; i++ {
 		espacioLibre -= mbr.Particion[i].Size
 		if mbr.Particion[i].Size == 0 {
@@ -158,14 +184,16 @@ func (self Fdisk) tieneErroresParticionPrimExt(mbr structs.Mbr) bool {
 	return errores
 }
 
+//OBTENER EL INICIO DE LA PARTICION PRIMARIA
 func (self Fdisk) getStartPrimaria(mbr structs.Mbr) int64 {
 	start := int64(unsafe.Sizeof(mbr))
 	for i := 0; i < 4; i++ {
-		start += mbr.Particion[i].Size
+		start += int64(mbr.Particion[i].Size)
 	}
 	return start
 }
 
+//CREAR PARTICION LOGICA
 func (self Fdisk) crearParticionLogica(mbr structs.Mbr) {
 	if self.tieneErroresParticionLogica(mbr) {
 		return
@@ -188,20 +216,18 @@ func (self Fdisk) crearParticionLogica(mbr structs.Mbr) {
 	}
 
 	ebrActual := structs.GetEbr(archivo, apuntador)
-	fmt.Println(structs.UintToString(ebrActual.Name))
 	for ebrActual.Next != 0 {
 		apuntador = ebrActual.Next
 		ebrActual = structs.GetEbr(archivo, apuntador)
 	}
-	fmt.Println(apuntador)
 
 	var ebr structs.Ebr
 	ebr.Status = '0'
 	ebr.Fit = structs.GetFit(self.Fit)
-	ebr.Start = apuntador + int64(unsafe.Sizeof(ebr)) + 1
+	ebr.Start = apuntador + int64(unsafe.Sizeof(ebr))
 	ebr.Size = structs.GetSize(self.Size, self.Unit)
 	ebr.Name = structs.GetName(self.Name)
-	ebr.Next = ebr.Start + ebr.Size
+	ebr.Next = ebr.Start + int64(ebr.Size)
 
 	//Creamos el Ebr de la particion
 	particionCreada := false
@@ -216,7 +242,7 @@ func (self Fdisk) crearParticionLogica(mbr structs.Mbr) {
 	ebrNuloCreado := false
 
 	var ebrNull structs.Ebr
-	ebrNull.Name = structs.GetName("EBRNULO")
+	ebrNull.Name = structs.GetName("NULL")
 
 	archivo.Seek(apuntador, 0)
 	var buffer2 bytes.Buffer
@@ -224,11 +250,32 @@ func (self Fdisk) crearParticionLogica(mbr structs.Mbr) {
 	ebrNuloCreado = structs.EscribirArchivo(archivo, buffer2.Bytes())
 
 	if particionCreada && ebrNuloCreado {
-		fmt.Println("Se ha creado la particion logica: " + self.Name)
+		fmt.Println("----- PARTICION CREADA -----")
+
+		fmt.Print("Name: ")
+		fmt.Println(structs.UintToString(ebr.Name))
+
+		fmt.Print("Status: ")
+		fmt.Println(string(ebr.Status))
+
+		fmt.Print("Fit: ")
+		fmt.Println(string(ebr.Fit))
+
+		fmt.Print("Start: ")
+		fmt.Println(ebr.Start)
+
+		fmt.Print("Size: ")
+		fmt.Println(ebr.Size)
+
+		fmt.Print("Next: ")
+		fmt.Println(ebr.Next)
+
+		fmt.Println("----------------------------")
 	}
 
 }
 
+//VERIFICAR HAY ERRORES PARA LA CREACION DE LA PARTICION LOGICA
 func (self Fdisk) tieneErroresParticionLogica(mbr structs.Mbr) bool {
 	archivo, err := os.OpenFile(self.Path, os.O_RDWR, 0777)
 	defer archivo.Close()
@@ -259,7 +306,7 @@ func (self Fdisk) tieneErroresParticionLogica(mbr structs.Mbr) bool {
 
 		// Si hay espacio suficiente para crear la particion
 	} else {
-		espacioLibre := mbr.Particion[pos].Start + mbr.Particion[pos].Size
+		espacioLibre := int64(mbr.Particion[pos].Size)
 		apuntador := mbr.Particion[pos].Start
 		ebrActual := structs.GetEbr(archivo, apuntador)
 		for ebrActual.Next != 0 {
@@ -269,7 +316,7 @@ func (self Fdisk) tieneErroresParticionLogica(mbr structs.Mbr) bool {
 		espacioLibre -= ebrActual.Start
 		espacioLibre -= int64(unsafe.Sizeof(ebrActual))
 
-		if espacioLibre < structs.GetSize(self.Size, self.Unit) {
+		if espacioLibre < int64(structs.GetSize(self.Size, self.Unit)) {
 			errores = true
 			fmt.Println("Error: No hay suficiente espacio en la particion extendida")
 		}
@@ -278,6 +325,7 @@ func (self Fdisk) tieneErroresParticionLogica(mbr structs.Mbr) bool {
 	return errores
 }
 
+//VERIFICAR SI EL NOMBRE YA EXISTE EN EL DISCO
 func (self Fdisk) nombreRepetido(mbr structs.Mbr) bool {
 	archivo, err := os.OpenFile(self.Path, os.O_RDWR, 0777)
 	defer archivo.Close()

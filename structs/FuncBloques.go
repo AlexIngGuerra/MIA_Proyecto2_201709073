@@ -2,10 +2,28 @@ package structs
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 )
 
+func LeerBloqueA() {
+
+}
+
+func leerBloqueC() {
+
+}
+
+func EscribirBloqueA(archivo *os.File, superBloque SuperBloque, bloque BloqueArchivo, n int32) SuperBloque {
+	return superBloque
+}
+
+func EscribirBloqueC(archivo *os.File, superBloque SuperBloque, bloque BloqueCarpeta, n int32) SuperBloque {
+	return superBloque
+}
+
+//OBTENEMOS UN STRING DE UN ARREGLO DE BLOQUES
 func LeerBloquesArchivo(bloques []BloqueArchivo) string {
 	contenido := ""
 	for i := 0; i < len(bloques); i++ {
@@ -23,7 +41,8 @@ func LeerBloquesArchivo(bloques []BloqueArchivo) string {
 	return contenido
 }
 
-func EscribirBloqueArchivo(texto string) []BloqueArchivo {
+//ESCRIBIMOS UN STRING EN UN ARREGLO DE BLOQUES
+func EscribirTextoEnBloques(texto string) []BloqueArchivo {
 	var bloques []BloqueArchivo
 	caracteres := []uint8(texto)
 	numCaracteres := len(caracteres)
@@ -33,7 +52,6 @@ func EscribirBloqueArchivo(texto string) []BloqueArchivo {
 		numCaracteres -= 64
 	}
 	var char uint8
-	fmt.Println(caracteres)
 
 	for i := 0; i < numBloques; i++ {
 		var bloque BloqueArchivo
@@ -59,6 +77,7 @@ func EscribirBloqueArchivo(texto string) []BloqueArchivo {
 	return bloques
 }
 
+//TRANSFORMAMOS UN STRING UN ARREGLO DE GRUPOS
 func GetGruposYUsuarios(texto string) []Grupo {
 	var grupos []Grupo
 	linea := strings.Split(texto, "\n")
@@ -95,6 +114,7 @@ func GetGruposYUsuarios(texto string) []Grupo {
 	return grupos
 }
 
+//AGREGAMOS UN GRUPO A UN ARREGLO
 func AddGrupo(grupos []Grupo, grupo Grupo) []Grupo {
 	for i := 0; i < len(grupos); i++ {
 		if grupos[i].Id == grupo.Id || grupos[i].Name == grupo.Name {
@@ -106,6 +126,7 @@ func AddGrupo(grupos []Grupo, grupo Grupo) []Grupo {
 	return grupos
 }
 
+//ARREGLAMOS UN USUARIO A UN ARREGLO
 func AddUsuario(grupos []Grupo, usuario Usuario, grupo string) []Grupo {
 
 	for i := 0; i < len(grupos); i++ {
@@ -129,6 +150,7 @@ func AddUsuario(grupos []Grupo, usuario Usuario, grupo string) []Grupo {
 	return grupos
 }
 
+//PASAMOS UN ARREGLO DE GRUPOS A UN STRING
 func GroupsToString(grupos []Grupo) string {
 	cadena := ""
 
@@ -142,4 +164,30 @@ func GroupsToString(grupos []Grupo) string {
 	}
 
 	return cadena
+}
+
+//OBTENEMOS EL NOMBRE DE UN BLOQUE
+func GetNameBloque(Name string) [12]uint8 {
+	var retorno [12]uint8
+	arreglo := []uint8(Name)
+	for i := 0; i < 12; i++ {
+		if i < len(arreglo) {
+			retorno[i] = arreglo[i]
+		} else {
+			retorno[i] = 0
+		}
+	}
+
+	return retorno
+}
+
+//AGREGAMOS UN NUEVO VALOR AL BLOQUE CARPETA
+func AddContenidoBloqueCarpeta(Name string, Inodo int32, bloque BloqueCarpeta) BloqueCarpeta {
+	for i := 0; i < 4; i++ {
+		if bloque.Contenido[i].Apuntador == -1 {
+			bloque.Contenido[i] = Contenido{Name: GetNameBloque(Name), Apuntador: Inodo}
+			break
+		}
+	}
+	return bloque
 }

@@ -2,6 +2,8 @@ package comandos
 
 import (
 	"MIA/structs"
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"os"
@@ -27,13 +29,14 @@ func NewMount() Mount {
 	return Mount{Path: "", Name: ""}
 }
 
+//EJECUTAR COMANDO
 func (self Mount) Ejecutar() {
 	if self.tieneErrores() {
 		return
 	}
 
 	mbr := structs.GetMbr(self.Path)
-	if mbr.Tamano <= 0 {
+	if mbr.Size <= 0 {
 		fmt.Println("Error: No se puede utilizar el disco solicitado")
 		return
 	}
@@ -50,9 +53,13 @@ func (self Mount) Ejecutar() {
 
 	nodo := self.generarNodo()
 	Montados = append(Montados, nodo)
+	self.marcarParticionMontada(mbr)
+
 	fmt.Println("Montada la particion con el id: " + nodo.Id)
+	fmt.Print("\n")
 }
 
+//VERIFICAR SI TIENE ERRORES DE PARAMETROS
 func (self Mount) tieneErrores() bool {
 	errores := false
 	if self.Path == "" {
@@ -68,6 +75,7 @@ func (self Mount) tieneErrores() bool {
 	return errores
 }
 
+//VERIFICAR SI LA PARTICION EXISTE
 func (self Mount) existeParticion(mbr structs.Mbr) bool {
 	archivo, err := os.OpenFile(self.Path, os.O_RDWR, 0777)
 	defer archivo.Close()
@@ -80,7 +88,7 @@ func (self Mount) existeParticion(mbr structs.Mbr) bool {
 	nombre := structs.GetName(self.Name)
 
 	for i := 0; i < 4; i++ {
-		if mbr.Particion[i].Name == nombre {
+		if mbr.Particion[i].Name == nombre && mbr.Particion[i].Type != 'E' {
 			return true
 		}
 
@@ -106,6 +114,7 @@ func (self Mount) existeParticion(mbr structs.Mbr) bool {
 	return false
 }
 
+//VERIFICAR SI LA PARTICION FUE MONTADA ANTERIORMENTE
 func (self Mount) estaMontada(Name [20]uint8) bool {
 	for i := 0; i < len(Montados); i++ {
 		if Montados[i].Name == Name {
@@ -115,6 +124,7 @@ func (self Mount) estaMontada(Name [20]uint8) bool {
 	return false
 }
 
+//OBTENER EL NODO DE LA PARTICION
 func (self Mount) generarNodo() ParticionMontada {
 	var nuevo ParticionMontada
 
@@ -137,4 +147,56 @@ func (self Mount) generarNodo() ParticionMontada {
 	nuevo.Name = structs.GetName(self.Name)
 
 	return nuevo
+}
+
+//MARCA COMO STATUS 1 A LA PARTICION MONTADA
+func (self Mount) marcarParticionMontada(mbr structs.Mbr) {
+
+	archivo, err := os.OpenFile(self.Path, os.O_RDWR, 0777)
+	defer archivo.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	nombre := structs.GetName(self.Name)
+
+	for i := 0; i < 4; i++ {
+		if mbr.Particion[i].Name == nombre && mbr.Particion[i].Type != 'E' {
+			mbr.Particion[i].Status = '1'
+			archivo.Seek(0, 0)
+			buffer := bytes.Buffer{}
+			binary.Write(&buffer, binary.BigEndian, &mbr)
+			structs.EscribirArchivo(archivo, buffer.Bytes())
+			return
+		}
+
+		if mbr.Particion[i].Type == 'E' {
+			apuntador := mbr.Particion[i].Start
+			ebrActual := structs.GetEbr(archivo, apuntador)
+
+			if ebrActual.Name == nombre {
+				ebrActual.Status = '1'
+				archivo.Seek(apuntador, 0)
+				buffer := bytes.Buffer{}
+				binary.Write(&buffer, binary.BigEndian, &ebrActual)
+				structs.EscribirArchivo(archivo, buffer.Bytes())
+				return
+			}
+
+			for ebrActual.Next != 0 {
+				apuntador = ebrActual.Next
+				ebrActual = structs.GetEbr(archivo, apuntador)
+
+				if ebrActual.Name == nombre {
+					ebrActual.Status = '1'
+					archivo.Seek(apuntador, 0)
+					buffer := bytes.Buffer{}
+					binary.Write(&buffer, binary.BigEndian, &ebrActual)
+					structs.EscribirArchivo(archivo, buffer.Bytes())
+					return
+				}
+			}
+		}
+	}
+
 }

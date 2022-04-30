@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unsafe"
 )
 
 type Mkdisk struct {
@@ -23,6 +24,7 @@ func NewMkdisk() Mkdisk {
 	return Mkdisk{Size: 0, Fit: "FF", Unit: "M", Path: ""}
 }
 
+// EJECUTAR EL COMANDO
 func (self Mkdisk) Ejecutar() {
 	if self.tieneErrores() {
 		return
@@ -31,8 +33,9 @@ func (self Mkdisk) Ejecutar() {
 	self.CrearCarpetaSiNoExiste(self.GetDir(self.Path)) //Crear las carpetas
 	if self.CrearArchivoSiNoExiste(self.Path) {
 		//Si se pudo crear el archivo se crea el disco
+
 		var mbr structs.Mbr
-		mbr.Tamano = structs.GetSize(self.Size, self.Unit)
+		mbr.Size = structs.GetSize(self.Size, self.Unit)
 		mbr.Fit = structs.GetFit(self.Fit)
 		mbr.Dks_Signature = rand.Int63()
 		currentTime := time.Now()
@@ -53,6 +56,7 @@ func (self Mkdisk) Ejecutar() {
 		}
 
 		//Escribir el MBR
+		archivo.Seek(0, 0)
 		var bufferMbr bytes.Buffer
 		binary.Write(&bufferMbr, binary.BigEndian, &mbr)
 		discoCreado = structs.EscribirArchivo(archivo, bufferMbr.Bytes())
@@ -62,22 +66,24 @@ func (self Mkdisk) Ejecutar() {
 		var cero [1024]uint8
 
 		for i := 0; i < len(cero); i++ {
-			cero[i] = '0'
+			cero[i] = 'M'
 		}
 		binary.Write(&bufferCero, binary.BigEndian, &cero)
-
+		archivo.Seek(int64(unsafe.Sizeof(structs.Mbr{})), 0)
 		for i := 0; i < tamano; i++ {
 			discoCreado = structs.EscribirArchivo(archivo, bufferCero.Bytes())
 		}
 
 		if discoCreado {
 			fmt.Println("Disco creado correctamente en: " + self.Path)
+
 		}
 
 	}
 	fmt.Print("\n")
 }
 
+//VERIFICACION DE PARAMETROS PARA EL COMANDO
 func (self Mkdisk) tieneErrores() bool {
 	errores := false
 	if self.Size < 1 {
@@ -90,6 +96,7 @@ func (self Mkdisk) tieneErrores() bool {
 	return errores
 }
 
+//OBTENER LA DIRECCION DE CARPETAS DONDE ESTA EL ARCHIVO
 func (self Mkdisk) GetDir(Path string) string {
 	cadena := strings.Split(Path, "/")
 	dir := cadena[0]
@@ -101,6 +108,7 @@ func (self Mkdisk) GetDir(Path string) string {
 	return dir
 }
 
+//CREAR LA CARPETA SI NO EXISTE
 func (self Mkdisk) CrearCarpetaSiNoExiste(Path string) {
 	_, err := os.Stat(Path)
 	if os.IsNotExist(err) {
@@ -112,6 +120,7 @@ func (self Mkdisk) CrearCarpetaSiNoExiste(Path string) {
 	}
 }
 
+//CREAR EL ARCHIVO SI NO EXISTE
 func (self Mkdisk) CrearArchivoSiNoExiste(Path string) bool {
 	if _, err := os.Stat(Path); os.IsNotExist(err) {
 		archivo, err := os.Create(Path)
@@ -126,6 +135,7 @@ func (self Mkdisk) CrearArchivoSiNoExiste(Path string) bool {
 	return false
 }
 
+//CREAR EL ARCHIVO AUNQUE YA EXISTE
 func (self Mkdisk) CrearArchivo(Path string) bool {
 	archivo, err := os.Create(Path)
 	defer archivo.Close()
@@ -136,6 +146,7 @@ func (self Mkdisk) CrearArchivo(Path string) bool {
 	return true
 }
 
+//BORRAR EL DISCO
 func (self Mkdisk) EjecutarRmdisk() {
 	if self.Path != "" {
 

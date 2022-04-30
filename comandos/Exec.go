@@ -13,6 +13,7 @@ func NewExec() Exec {
 	return Exec{Path: ""}
 }
 
+//EJECUTAR COMANDO
 func (self Exec) Ejecutar() string {
 	contenido := ""
 	if !self.tieneErrores() {
@@ -23,6 +24,7 @@ func (self Exec) Ejecutar() string {
 	return ""
 }
 
+//VERIFICAR ERRORES DE PARAMETROS
 func (self Exec) tieneErrores() bool {
 	errores := false
 	if self.Path == "" {
