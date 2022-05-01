@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 	"unsafe"
 )
@@ -66,17 +65,35 @@ func (self Mkfs) formateoFull(mount ParticionMontada) {
 	part := structs.GetParticion(mount.Name, mbr, archivo)
 	n := structs.GetN(part.Size)
 
-	fmt.Println("Inicio: " + strconv.Itoa(int(part.Start)) + " , Size: " + strconv.Itoa(int(part.Size)))
-
 	superBloque := self.GenerarSuperBloque(n, part.Start)
 	self.limpiarEspacioDisco(archivo, part.Start, part.Size)
 
 	//Creamos el usuario root
 	self.crearUsuarioRoot(archivo, superBloque, n, part.Start)
+	fmt.Println("Formateo terminado")
 }
 
 //FORMATEO FAST, LIMPIA SOLAMENTE LOS BITMAPS
 func (self Mkfs) formateoFast(mount ParticionMontada) {
+
+	archivo, err := os.OpenFile(mount.Path, os.O_RDWR, 0777)
+	defer archivo.Close()
+	if err != nil {
+		fmt.Println("Error: No se ha podido abrir el archivo")
+		return
+	}
+
+	mbr := structs.GetMbr(mount.Path)
+	part := structs.GetParticion(mount.Name, mbr, archivo)
+	n := structs.GetN(part.Size)
+
+	superBloque := self.GenerarSuperBloque(n, part.Start)
+	self.limpiarEspacioDisco(archivo, superBloque.Bm_block_start, 3*n) //Limipar bitmap de bloques
+	self.limpiarEspacioDisco(archivo, superBloque.Bm_inode_start, n)   //limpiar bitmap de inodos
+
+	//Creamos el usuario root
+	self.crearUsuarioRoot(archivo, superBloque, n, part.Start)
+	fmt.Println("Formateo terminado")
 }
 
 //GENERAR UN SUPERBLOQUE DEFAULT

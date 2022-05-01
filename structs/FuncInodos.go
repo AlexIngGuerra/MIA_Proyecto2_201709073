@@ -24,8 +24,6 @@ func LeerInodo(archivo *os.File, inicio int64) Inodo {
 
 //FUNCION PARA ESCRIBIR EL INODO EN EL ARCHIVOS
 func EscribirInodo(archivo *os.File, superBloque SuperBloque, inodo Inodo, n int32) SuperBloque {
-	fmt.Println("Escribiendo Inodo Raiz")
-
 	if superBloque.Free_inodes_count < 1 {
 		fmt.Println("Error: No se pueden crear más inodos")
 		return superBloque
@@ -41,4 +39,17 @@ func EscribirInodo(archivo *os.File, superBloque SuperBloque, inodo Inodo, n int
 	MarcarPrimerBitLibre(archivo, superBloque.Bm_inode_start, n) //marcamos el primer bit como libre
 
 	return superBloque
+}
+
+func ObtenerBloquesArchivo(archivo *os.File, superBloque SuperBloque, inodo Inodo) []BloqueArchivo {
+	var bloques []BloqueArchivo
+
+	for i := 0; i < len(inodo.Block); i++ {
+		if inodo.Block[i] != -1 {
+			bloc := LeerBloqueA(archivo, superBloque.Block_start+int64(inodo.Block[i])*int64(superBloque.Block_Size))
+			bloques = append(bloques, bloc)
+		}
+	}
+
+	return bloques
 }

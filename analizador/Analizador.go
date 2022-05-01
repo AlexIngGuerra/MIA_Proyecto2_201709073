@@ -52,6 +52,12 @@ func (self Analizador) Analizar(entrada string) {
 			} else if strings.ToLower(comando[0]) == "mkfs" {
 				self.cmdMkfs(comando)
 
+			} else if strings.ToLower(comando[0]) == "login" {
+				self.cmdLogin(comando)
+
+			} else if strings.ToLower(comando[0]) == "logout" {
+				self.cmdLogout(comando)
+
 			}
 
 		}
@@ -243,6 +249,7 @@ func (self Analizador) cmdFdisk(comando []string) {
 	cmd.Ejecutar()
 }
 
+//COMANDO MOUNT
 func (self Analizador) cmdMount(comando []string) {
 	cmd := comandos.NewMount()
 
@@ -263,6 +270,7 @@ func (self Analizador) cmdMount(comando []string) {
 	cmd.Ejecutar()
 }
 
+//COMANDO REP
 func (self Analizador) cmdRep(comando []string) {
 	cmd := comandos.NewRep()
 
@@ -290,11 +298,13 @@ func (self Analizador) cmdRep(comando []string) {
 	cmd.Ejecutar()
 }
 
+//COMANDO MKFS
 func (self Analizador) cmdMkfs(comando []string) {
 	cmd := comandos.NewMkfs()
 
 	for i := 1; i < len(comando); i++ {
 		if i%2 != 0 && (i+1) < len(comando) {
+
 			if strings.ToLower(comando[i]) == "-id" {
 				cmd.Id = comando[i+1]
 
@@ -310,8 +320,41 @@ func (self Analizador) cmdMkfs(comando []string) {
 			} else {
 				fmt.Println("Error: El comando exec no contiene el comando \"" + comando[i] + "\"")
 			}
+
 		}
 	}
 
 	cmd.Ejecutar()
+}
+
+//COMANDO LOGIN
+func (self Analizador) cmdLogin(comando []string) {
+	cmd := comandos.NewLogin()
+
+	for i := 1; i < len(comando); i++ {
+		if i%2 != 0 && (i+1) < len(comando) {
+
+			if strings.ToLower(comando[i]) == "-id" {
+				cmd.Id = comando[i+1]
+
+			} else if strings.ToLower(comando[i]) == "-usuario" {
+				cmd.Usuario = comando[i+1]
+
+			} else if strings.ToLower(comando[i]) == "-password" {
+				cmd.Password = comando[i+1]
+
+			} else {
+				fmt.Println("Error: El comando exec no contiene el comando \"" + comando[i] + "\"")
+			}
+
+		}
+	}
+
+	cmd.Ejecutar()
+}
+
+//COMANOD LOGOUT
+func (self Analizador) cmdLogout(comando []string) {
+	cmd := comandos.NewLogin()
+	cmd.Logout()
 }

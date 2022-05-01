@@ -42,3 +42,13 @@ func MarcarPrimerBitLibre(archivo *os.File, inicio int64, size int32) {
 	binary.Write(&buffer, binary.BigEndian, &uno)
 	EscribirArchivo(archivo, buffer.Bytes())
 }
+
+func ExisteStructEnBM(archivo *os.File, inicio int64, size int32, numStruct int64) bool {
+	archivo.Seek(inicio+numStruct, 0)
+	caracter := LeerArchivo(archivo, 1)
+	ascii := uint8(caracter[0])
+	if ascii == 1 {
+		return true
+	}
+	return false
+}

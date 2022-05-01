@@ -1,25 +1,80 @@
 package structs
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
+	"unsafe"
 )
 
-func LeerBloqueA() {
+//FUNCION PARA LEER BLOQUES DE TIPO ARCHIVO
+func LeerBloqueA(archivo *os.File, inicio int64) BloqueArchivo {
+	bloque := BloqueArchivo{}
 
+	archivo.Seek(inicio, 0)
+
+	size := int(unsafe.Sizeof(bloque))
+	data := LeerArchivo(archivo, size)
+	buffer := bytes.NewBuffer(data)
+	binary.Read(buffer, binary.BigEndian, &bloque)
+
+	return bloque
 }
 
-func leerBloqueC() {
+//FUNCION PARA LEER BLOQUES DE TIPO CARPETA
+func LeerBloqueC(archivo *os.File, inicio int64) BloqueCarpeta {
+	bloque := BloqueCarpeta{}
 
+	archivo.Seek(inicio, 0)
+
+	size := int(unsafe.Sizeof(bloque))
+	data := LeerArchivo(archivo, size)
+	buffer := bytes.NewBuffer(data)
+	binary.Read(buffer, binary.BigEndian, &bloque)
+
+	return bloque
 }
 
+//FUNCION PARA ESCRIBIR BLOQUES DE ARCHIVO
 func EscribirBloqueA(archivo *os.File, superBloque SuperBloque, bloque BloqueArchivo, n int32) SuperBloque {
+
+	if superBloque.Free_inodes_count < 1 {
+		fmt.Println("Error: No se pueden crear más bloques")
+		return superBloque
+	}
+
+	archivo.Seek(superBloque.First_bloc, 0)
+	buffer := bytes.Buffer{}
+	binary.Write(&buffer, binary.BigEndian, &bloque)
+	EscribirArchivo(archivo, buffer.Bytes())
+
+	superBloque.Free_blocks_count -= 1                             // -1 Inodos libres
+	superBloque.First_bloc += int64(superBloque.Block_Size)        //+1 Inodo al inicio
+	MarcarPrimerBitLibre(archivo, superBloque.Bm_block_start, 3*n) //marcamos el primer bit como libre
+
 	return superBloque
 }
 
+//FUNCION PARA ESCRIBIR BLOQUES DE CARPETA
 func EscribirBloqueC(archivo *os.File, superBloque SuperBloque, bloque BloqueCarpeta, n int32) SuperBloque {
+
+	if superBloque.Free_inodes_count < 1 {
+		fmt.Println("Error: No se pueden crear más bloques")
+		return superBloque
+	}
+
+	archivo.Seek(superBloque.First_bloc, 0)
+	buffer := bytes.Buffer{}
+	binary.Write(&buffer, binary.BigEndian, &bloque)
+	EscribirArchivo(archivo, buffer.Bytes())
+
+	superBloque.Free_blocks_count -= 1                             // -1 Inodos libres
+	superBloque.First_bloc += int64(superBloque.Block_Size)        //+1 Inodo al inicio
+	MarcarPrimerBitLibre(archivo, superBloque.Bm_block_start, 3*n) //marcamos el primer bit como libres
+
 	return superBloque
 }
 
