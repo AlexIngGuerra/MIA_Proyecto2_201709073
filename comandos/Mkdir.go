@@ -18,6 +18,7 @@ func NewMkdir() Mkdir {
 	return Mkdir{Path: "", P: false}
 }
 
+//EJECUTAR EL COMANDO
 func (self Mkdir) Ejecutar() {
 	fmt.Println("Mkdir ejecutando")
 	if self.tieneErrores() {
@@ -49,6 +50,7 @@ func (self Mkdir) Ejecutar() {
 	fmt.Print("\n")
 }
 
+//VERIFICAR SI EL COMANDO SE PUEDE EJECUTAR
 func (self Mkdir) tieneErrores() bool {
 	errores := false
 	if self.Path == "" {
@@ -63,6 +65,7 @@ func (self Mkdir) tieneErrores() bool {
 	return errores
 }
 
+//CREA LA CARPETA SOLICITADA (NO CREA LAS CARPETAS PADRES SI NO EXISTEN)
 func (self Mkdir) CrearCarpetaSinPadres(archivo *os.File, superbloque structs.SuperBloque, n int32, partStart int64) {
 
 	carpetas := strings.Split(self.Path, "/")
@@ -92,7 +95,6 @@ func (self Mkdir) CrearCarpetaSinPadres(archivo *os.File, superbloque structs.Su
 	}
 
 	num := structs.BuscarBitLibre(archivo, int64(superbloque.Bm_inode_start), superbloque.Inodes_count)
-	fmt.Println(numInoActual, num)
 
 	inodo, superbloque = structs.AgregarNuevoApuntador(archivo, superbloque, inodo, numInoActual, carpetaNueva, num, numInoAnterior)
 
@@ -106,4 +108,5 @@ func (self Mkdir) CrearCarpetaSinPadres(archivo *os.File, superbloque structs.Su
 	inodoNuevo := structs.NewInodo(int32(Logeado.Gid), int32(Logeado.Uid), 0)
 	superbloque = structs.EscribirInodo(archivo, superbloque, inodoNuevo)
 	structs.EscribirSuperBloque(archivo, superbloque, partStart)
+	fmt.Println("Carpeta creada")
 }

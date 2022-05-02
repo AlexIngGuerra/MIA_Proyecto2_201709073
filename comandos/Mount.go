@@ -56,6 +56,11 @@ func (self Mount) Ejecutar() {
 	self.marcarParticionMontada(mbr)
 
 	fmt.Println("Montada la particion con el id: " + nodo.Id)
+	fmt.Println("Particiones Montadas:")
+	for i := 0; i < len(Montados); i++ {
+		fmt.Println("Id: ", Montados[i].Id, ", Nombre:", structs.UintToString(Montados[i].Name), " Disco: ", Montados[i].Path)
+	}
+
 	fmt.Print("\n")
 }
 

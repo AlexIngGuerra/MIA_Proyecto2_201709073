@@ -318,22 +318,22 @@ func (self Rep) graficarBloqueA(bloque structs.BloqueArchivo, numBloque int32) s
 	contenido = contenido + "<tr><td colspan=\"1\"> Bloque " + strconv.Itoa(int(numBloque)) + " </td></tr>"
 
 	txtBloque := ""
-	corte := 0
-	for i := 0; i < len(bloque.Contenido); i++ {
+	numero := false
+	for i := 0; i < 64; i++ {
+		if numero {
+			txtBloque = txtBloque + strconv.Itoa(int(bloque.Contenido[i]))
+			continue
+		}
+
 		if bloque.Contenido[i] == 0 {
-			corte = i
-			break
+			txtBloque = txtBloque + strconv.Itoa(int(bloque.Contenido[i]))
+			numero = true
 		} else if bloque.Contenido[i] == '\n' {
 			txtBloque = txtBloque + "\\n"
 		} else {
 			txtBloque = txtBloque + string(bloque.Contenido[i])
 		}
 	}
-
-	for i := corte; i < len(bloque.Contenido); i++ {
-		txtBloque = txtBloque + strconv.Itoa(int(bloque.Contenido[i]))
-	}
-
 	contenido = contenido + "<tr><td>" + txtBloque + "</td></tr>"
 
 	contenido = contenido + "</table>\n>];\n" //FIN TABLA

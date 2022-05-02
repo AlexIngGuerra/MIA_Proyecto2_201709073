@@ -66,7 +66,7 @@ func (self Mkdisk) Ejecutar() {
 		var cero [1024]uint8
 
 		for i := 0; i < len(cero); i++ {
-			cero[i] = 'M'
+			cero[i] = 0
 		}
 		binary.Write(&bufferCero, binary.BigEndian, &cero)
 		archivo.Seek(int64(unsafe.Sizeof(structs.Mbr{})), 0)

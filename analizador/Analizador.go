@@ -61,6 +61,15 @@ func (self Analizador) Analizar(entrada string) {
 			} else if strings.ToLower(comando[0]) == "mkdir" {
 				self.cmdMkdir(comando)
 
+			} else if strings.ToLower(comando[0]) == "mkgrp" {
+				self.cmdMkgrp(comando)
+
+			} else if strings.ToLower(comando[0]) == "mkusr" {
+				self.cmdMkuser(comando)
+
+			} else if strings.ToLower(comando[0]) == "mkfile" {
+				self.cmdMkfile(comando)
+
 			}
 
 		}
@@ -367,8 +376,10 @@ func (self Analizador) cmdLogout(comando []string) {
 	cmd.Logout()
 }
 
+//COMANDO MKDIR
 func (self Analizador) cmdMkdir(comando []string) {
 	cmd := comandos.NewMkdir()
+
 	for i := 1; i < len(comando); i++ {
 		if strings.ToLower(comando[i]) == "-path" {
 			if (i + 1) < len(comando) {
@@ -379,5 +390,85 @@ func (self Analizador) cmdMkdir(comando []string) {
 		}
 
 	}
+
+	cmd.Ejecutar()
+}
+
+//COMANDO MKGRP
+func (self Analizador) cmdMkgrp(comando []string) {
+	cmd := comandos.NewMkgrp()
+
+	for i := 1; i < len(comando); i++ {
+		if i%2 != 0 && (i+1) < len(comando) {
+			if strings.ToLower(comando[i]) == "-name" {
+				if (i + 1) < len(comando) {
+					cmd.Name = comando[i+1]
+				}
+			} else {
+				fmt.Println("Error: El comando exec no contiene el comando \"" + comando[i] + "\"")
+			}
+		}
+	}
+
+	cmd.Ejecutar()
+}
+
+//COMANDO MKuSR
+func (self Analizador) cmdMkuser(comando []string) {
+
+	cmd := comandos.NewMkuser()
+
+	for i := 1; i < len(comando); i++ {
+		if i%2 != 0 && (i+1) < len(comando) {
+			if strings.ToLower(comando[i]) == "-usuario" {
+				if (i + 1) < len(comando) {
+					cmd.Usuario = comando[i+1]
+				}
+			} else if strings.ToLower(comando[i]) == "-pwd" {
+				if (i + 1) < len(comando) {
+					cmd.Password = comando[i+1]
+				}
+			} else if strings.ToLower(comando[i]) == "-grp" {
+				if (i + 1) < len(comando) {
+					cmd.Group = comando[i+1]
+				}
+			} else {
+				fmt.Println("Error: El comando exec no contiene el comando \"" + comando[i] + "\"")
+			}
+		}
+	}
+
+	cmd.Ejecutar()
+}
+
+//COMANDO MKFILE OJALA FUNCIONE
+func (self Analizador) cmdMkfile(comando []string) {
+	cmd := comandos.NewMkfile()
+
+	for i := 1; i < len(comando); i++ {
+		if strings.ToLower(comando[i]) == "-path" {
+			if (i + 1) < len(comando) {
+				cmd.Path = comando[i+1]
+			}
+		} else if strings.ToLower(comando[i]) == "-r" {
+
+		} else if strings.ToLower(comando[i]) == "-size" {
+			if (i + 1) < len(comando) {
+
+				valor, err := strconv.Atoi(comando[i+1])
+				if err != nil {
+					cmd.Size = -1
+				} else {
+					cmd.Size = valor
+				}
+			}
+		} else if strings.ToLower(comando[i]) == "-cont" {
+			if (i + 1) < len(comando) {
+				cmd.Cont = comando[i+1]
+			}
+		}
+
+	}
+
 	cmd.Ejecutar()
 }

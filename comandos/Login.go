@@ -16,7 +16,7 @@ type Usuario struct {
 	Usuario string
 	Uid     int
 	Gid     int
-	Id      string
+	Id      string //Id de la particion en la que se logeo
 }
 
 var Logeado Usuario

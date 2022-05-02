@@ -92,7 +92,6 @@ func LeerBloquesArchivo(bloques []BloqueArchivo) string {
 		}
 
 	}
-
 	return contenido
 }
 
@@ -188,7 +187,7 @@ func AddUsuario(grupos []Grupo, usuario Usuario, grupo string) []Grupo {
 		for j := 0; j < len(grupos[i].Users); j++ {
 
 			if grupos[i].Users[j].User == usuario.User {
-				fmt.Println("Error: No puede exisitr un usuario repetido")
+				fmt.Println("Error: No puede existur un usuario repetido")
 				return grupos
 			}
 
@@ -197,8 +196,11 @@ func AddUsuario(grupos []Grupo, usuario Usuario, grupo string) []Grupo {
 
 	for i := 0; i < len(grupos); i++ {
 		if grupos[i].Name == grupo {
+
+			usuario.Id = len(grupos[i].Users) + 1
+			fmt.Println(usuario.Id)
 			grupos[i].Users = append(grupos[i].Users, usuario)
-			break
+
 		}
 	}
 
@@ -213,7 +215,8 @@ func GroupsToString(grupos []Grupo) string {
 		cadena = cadena + strconv.Itoa(grupos[i].Id) + ", G, " + grupos[i].Name + "\n"
 
 		for j := 0; j < len(grupos[i].Users); j++ {
-			cadena = cadena + strconv.Itoa(grupos[i].Users[j].Id) + ", U, " + grupos[i].Name + ", " + grupos[i].Users[j].User + ", " + grupos[i].Users[j].Password + "\n"
+			convirtiendo := strconv.Itoa(grupos[i].Users[j].Id)
+			cadena += convirtiendo + ", U, " + grupos[i].Name + ", " + grupos[i].Users[j].User + ", " + grupos[i].Users[j].Password + "\n"
 		}
 
 	}
