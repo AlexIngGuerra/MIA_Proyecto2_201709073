@@ -39,7 +39,7 @@ func LeerBloqueC(archivo *os.File, inicio int64) BloqueCarpeta {
 }
 
 //FUNCION PARA ESCRIBIR BLOQUES DE ARCHIVO
-func EscribirBloqueA(archivo *os.File, superBloque SuperBloque, bloque BloqueArchivo, n int32) SuperBloque {
+func EscribirBloqueA(archivo *os.File, superBloque SuperBloque, bloque BloqueArchivo) SuperBloque {
 
 	if superBloque.Free_inodes_count < 1 {
 		fmt.Println("Error: No se pueden crear más bloques")
@@ -51,15 +51,15 @@ func EscribirBloqueA(archivo *os.File, superBloque SuperBloque, bloque BloqueArc
 	binary.Write(&buffer, binary.BigEndian, &bloque)
 	EscribirArchivo(archivo, buffer.Bytes())
 
-	superBloque.Free_blocks_count -= 1                             // -1 Inodos libres
-	superBloque.First_bloc += int64(superBloque.Block_Size)        //+1 Inodo al inicio
-	MarcarPrimerBitLibre(archivo, superBloque.Bm_block_start, 3*n) //marcamos el primer bit como libre
+	superBloque.Free_blocks_count -= 1                                                  // -1 Inodos libres
+	superBloque.First_bloc += int64(superBloque.Block_Size)                             //+1 Inodo al inicio
+	MarcarPrimerBitLibre(archivo, superBloque.Bm_block_start, superBloque.Blocks_count) //marcamos el primer bit como libre
 
 	return superBloque
 }
 
 //FUNCION PARA ESCRIBIR BLOQUES DE CARPETA
-func EscribirBloqueC(archivo *os.File, superBloque SuperBloque, bloque BloqueCarpeta, n int32) SuperBloque {
+func EscribirBloqueC(archivo *os.File, superBloque SuperBloque, bloque BloqueCarpeta) SuperBloque {
 
 	if superBloque.Free_inodes_count < 1 {
 		fmt.Println("Error: No se pueden crear más bloques")
@@ -71,9 +71,9 @@ func EscribirBloqueC(archivo *os.File, superBloque SuperBloque, bloque BloqueCar
 	binary.Write(&buffer, binary.BigEndian, &bloque)
 	EscribirArchivo(archivo, buffer.Bytes())
 
-	superBloque.Free_blocks_count -= 1                             // -1 Inodos libres
-	superBloque.First_bloc += int64(superBloque.Block_Size)        //+1 Inodo al inicio
-	MarcarPrimerBitLibre(archivo, superBloque.Bm_block_start, 3*n) //marcamos el primer bit como libres
+	superBloque.Free_blocks_count -= 1                                                  // -1 Inodos libres
+	superBloque.First_bloc += int64(superBloque.Block_Size)                             //+1 Inodo al inicio
+	MarcarPrimerBitLibre(archivo, superBloque.Bm_block_start, superBloque.Blocks_count) //marcamos el primer bit como libres
 
 	return superBloque
 }
@@ -234,6 +234,21 @@ func GetNameBloque(Name string) [12]uint8 {
 	}
 
 	return retorno
+}
+
+//OBTENEMOS EL NOMBRE DE UN BLOQUE COMO STRING
+func GetNameBloqueString(Name [12]uint8) string {
+	cadena := ""
+
+	for i := 0; i < len(Name); i++ {
+		if Name[i] == 0 {
+			break
+
+		}
+		cadena = cadena + string(Name[i])
+	}
+
+	return cadena
 }
 
 //AGREGAMOS UN NUEVO VALOR AL BLOQUE CARPETA

@@ -43,6 +43,7 @@ func MarcarPrimerBitLibre(archivo *os.File, inicio int64, size int32) {
 	EscribirArchivo(archivo, buffer.Bytes())
 }
 
+//VERIFICA SI EXISTE EL STRUCT EN EL INODO
 func ExisteStructEnBM(archivo *os.File, inicio int64, size int32, numStruct int64) bool {
 	archivo.Seek(inicio+numStruct, 0)
 	caracter := LeerArchivo(archivo, 1)

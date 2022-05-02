@@ -58,6 +58,9 @@ func (self Analizador) Analizar(entrada string) {
 			} else if strings.ToLower(comando[0]) == "logout" {
 				self.cmdLogout(comando)
 
+			} else if strings.ToLower(comando[0]) == "mkdir" {
+				self.cmdMkdir(comando)
+
 			}
 
 		}
@@ -67,7 +70,7 @@ func (self Analizador) Analizar(entrada string) {
 
 //Obtener el comando
 func (self Analizador) getComando(linea string) []string {
-
+	linea = linea + " "
 	var comando []string
 	comentario := strings.Split(linea, "#")
 	comillas := strings.Split(comentario[0], "\"")
@@ -281,7 +284,12 @@ func (self Analizador) cmdRep(comando []string) {
 				cmd.Path = comando[i+1]
 
 			} else if strings.ToLower(comando[i]) == "-name" {
-				cmd.Name = strings.ToLower(comando[i+1])
+				valor := strings.ToLower(comando[i+1])
+				if valor == "file" || valor == "disk" || valor == "tree" {
+					cmd.Name = strings.ToLower(comando[i+1])
+				} else {
+					fmt.Println("Error: Valor del parametro -name incorrecto")
+				}
 
 			} else if strings.ToLower(comando[i]) == "-id" {
 				cmd.Id = comando[i+1]
@@ -357,4 +365,19 @@ func (self Analizador) cmdLogin(comando []string) {
 func (self Analizador) cmdLogout(comando []string) {
 	cmd := comandos.NewLogin()
 	cmd.Logout()
+}
+
+func (self Analizador) cmdMkdir(comando []string) {
+	cmd := comandos.NewMkdir()
+	for i := 1; i < len(comando); i++ {
+		if strings.ToLower(comando[i]) == "-path" {
+			if (i + 1) < len(comando) {
+				cmd.Path = comando[i+1]
+			}
+		} else if strings.ToLower(comando[i]) == "-p" {
+			cmd.P = true
+		}
+
+	}
+	cmd.Ejecutar()
 }

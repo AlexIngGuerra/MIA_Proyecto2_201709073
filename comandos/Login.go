@@ -71,6 +71,11 @@ func (self Login) tieneErrores() bool {
 		fmt.Println("Error: El parametro id es obligatorio")
 	}
 
+	if Logeado.Gid != 0 && Logeado.Uid != 0 {
+		fmt.Println("Error: Usted debe cerrar sesión para ingresar con otro usuario")
+		errores = true
+	}
+
 	return errores
 }
 

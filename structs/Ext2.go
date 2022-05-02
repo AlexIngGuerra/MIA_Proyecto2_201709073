@@ -31,7 +31,7 @@ type Inodo struct {
 	Mtime [20]uint8 //Fecha Modificaion
 	Block [16]int32
 	Type  uint8
-	Perm  [9]bool
+	Perm  int32
 }
 
 type BloqueCarpeta struct {
@@ -66,7 +66,7 @@ func NewInodo(Uid int32, Gid int32, tipo uint8) Inodo {
 		inodo.Block[i] = -1
 	}
 
-	inodo.Perm = [9]bool{true, true, true, true, true, true, true, true, true}
+	inodo.Perm = 664
 
 	return inodo
 }

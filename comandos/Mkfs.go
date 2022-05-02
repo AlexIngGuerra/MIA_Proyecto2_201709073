@@ -21,7 +21,6 @@ func NewMkfs() Mkfs {
 
 //EJECUTAR EL COMANDO
 func (self Mkfs) Ejecutar() {
-	fmt.Println("Ejecutando mkfs")
 	if self.tieneErrores() {
 		return
 	}
@@ -69,7 +68,7 @@ func (self Mkfs) formateoFull(mount ParticionMontada) {
 	self.limpiarEspacioDisco(archivo, part.Start, part.Size)
 
 	//Creamos el usuario root
-	self.crearUsuarioRoot(archivo, superBloque, n, part.Start)
+	self.crearUsuarioRoot(archivo, superBloque, part.Start)
 	fmt.Println("Formateo terminado")
 }
 
@@ -92,7 +91,7 @@ func (self Mkfs) formateoFast(mount ParticionMontada) {
 	self.limpiarEspacioDisco(archivo, superBloque.Bm_inode_start, n)   //limpiar bitmap de inodos
 
 	//Creamos el usuario root
-	self.crearUsuarioRoot(archivo, superBloque, n, part.Start)
+	self.crearUsuarioRoot(archivo, superBloque, part.Start)
 	fmt.Println("Formateo terminado")
 }
 
@@ -141,10 +140,8 @@ func (self Mkfs) limpiarEspacioDisco(archivo *os.File, inicio int64, size int32)
 }
 
 //GENERAR LA CARPETA Y ARCHIVO USERS.TXT PARA LOS USUARIOS
-func (self Mkfs) crearUsuarioRoot(archivo *os.File, superbloque structs.SuperBloque, n int32, partStart int64) {
-	self.imprimirSB(superbloque, n)
+func (self Mkfs) crearUsuarioRoot(archivo *os.File, superbloque structs.SuperBloque, partStart int64) {
 
-	//Paso 1: Generar Inodo Raiz "/"
 	inodoR := structs.NewInodo(1, 1, 0) //User:1, Grupo:1, Tipo:0
 	inodoU := structs.NewInodo(1, 1, 1) //User:1, Grupo:1, Tipo:1
 
@@ -156,14 +153,14 @@ func (self Mkfs) crearUsuarioRoot(archivo *os.File, superbloque structs.SuperBlo
 	bloquesA := structs.EscribirTextoEnBloques(root)
 	inodoU.Block[0] = 1
 
-	superbloque = structs.EscribirInodo(archivo, superbloque, inodoR, n)
-	superbloque = structs.EscribirInodo(archivo, superbloque, inodoU, n)
-	superbloque = structs.EscribirBloqueC(archivo, superbloque, bloqueC, n)
-	superbloque = structs.EscribirBloqueA(archivo, superbloque, bloquesA[0], n)
+	superbloque = structs.EscribirInodo(archivo, superbloque, inodoR)
+	superbloque = structs.EscribirInodo(archivo, superbloque, inodoU)
+	superbloque = structs.EscribirBloqueC(archivo, superbloque, bloqueC)
+	superbloque = structs.EscribirBloqueA(archivo, superbloque, bloquesA[0])
 
 	structs.EscribirSuperBloque(archivo, superbloque, partStart)
 
-	self.imprimirSB(superbloque, n)
+	self.imprimirSB(superbloque, superbloque.Inodes_count)
 }
 
 func (self Mkfs) imprimirSB(sb structs.SuperBloque, n int32) {

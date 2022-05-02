@@ -41,15 +41,12 @@ func (self Rep) Ejecutar() {
 
 		if self.Name == "disk" {
 			self.repDisk(DotPath, mount)
+		} else if self.Name == "tree" {
+			self.repTree(DotPath, mount)
+		} else if self.Name == "file" {
+
 		}
 
-		cmd := exec.Command("dot", "-Tsvg", "-o", self.Path+".svg", DotPath)
-		_, err := cmd.Output()
-		if err != nil {
-			fmt.Println("Error: Dot no pudo generar el svg: ", err)
-		}
-		fmt.Println("Reporte Generado: " + self.Path + ".svg")
-		fmt.Print("\n")
 	}
 }
 
@@ -180,4 +177,170 @@ func (self Rep) repDisk(DotPath string, mount ParticionMontada) {
 		fmt.Println("Error: Error al escribir el archivo")
 		return
 	}
+
+	cmd := exec.Command("dot", "-Tsvg", "-o", self.Path+".svg", DotPath)
+	_, err3 := cmd.Output()
+	if err3 != nil {
+		fmt.Println("Error: Dot no pudo generar el svg: ", err)
+	}
+	fmt.Println("Reporte Generado: " + self.Path + ".svg")
+	fmt.Print("\n")
+}
+
+//GENERAR EL REPORTE TREE
+func (self Rep) repTree(DotPath string, mount ParticionMontada) {
+	disco, err := os.OpenFile(mount.Path, os.O_RDWR, 0777)
+	defer disco.Close()
+
+	if err != nil {
+		fmt.Println("Error: No se ha podido abrir el archivo")
+		log.Fatal(err)
+	}
+
+	mbr := structs.GetMbr(mount.Path)
+	part := structs.GetParticion(mount.Name, mbr, disco)
+	superBloque := structs.LeerSuperBloque(disco, part.Start)
+	n := structs.GetN(part.Size)
+
+	contenido := "digraph H {\nrankdir=\"LR\"\n"
+
+	//AQUI SE GENERA EL REPROTE
+
+	apuntador := superBloque.Bm_inode_start
+	for ap := int32(0); ap < n; ap++ {
+		if structs.ExisteStructEnBM(disco, apuntador, n, int64(ap)) {
+			inodo := structs.LeerInodo(disco, superBloque.Inode_start+int64(ap)*int64(superBloque.Inode_Size))
+			contenido = contenido + self.graficarInodo(inodo, ap, superBloque, disco)
+		}
+	}
+
+	contenido += "}"
+
+	archivo2, err := os.OpenFile(DotPath, os.O_RDWR, 0777)
+	if err != nil {
+		fmt.Println("Error: No se pudo abrir archivo")
+		return
+	}
+	defer archivo2.Close()
+
+	b := []byte(contenido)
+	err2 := ioutil.WriteFile(DotPath, b, 0777)
+	if err2 != nil {
+		fmt.Println("Error: Error al escribir el archivo")
+		return
+	}
+
+	cmd := exec.Command("dot", "-Tsvg", "-o", self.Path+".svg", DotPath)
+	_, err3 := cmd.Output()
+	if err3 != nil {
+		fmt.Println("Error: Dot no pudo generar el svg: ", err)
+	}
+	fmt.Println("Reporte Generado: " + self.Path + ".svg")
+	fmt.Print("\n")
+}
+
+func (self Rep) graficarInodo(inodo structs.Inodo, numInodo int32, superBloque structs.SuperBloque, archivo *os.File) string {
+	id := "I" + strconv.Itoa(int(numInodo))
+	contenido := "I" + strconv.Itoa(int(numInodo)) + "[\nshape=plaintext\nlabel=<"
+	contenido = contenido + "<table border='1' cellborder='1'>" //INICIO TABLA
+
+	contenido = contenido + "<tr><td colspan=\"2\"> Inodo " + strconv.Itoa(int(numInodo)) + " </td></tr>"
+	contenido = contenido + "<tr><td> Uid </td><td> " + strconv.Itoa(int(inodo.Uid)) + " </td></tr>"
+	contenido = contenido + "<tr><td> Gid </td><td> " + strconv.Itoa(int(inodo.Gid)) + " </td></tr>"
+	contenido = contenido + "<tr><td> Size </td><td> " + strconv.Itoa(int(inodo.Size)) + " </td></tr>"
+
+	for i := 0; i < 16; i++ {
+		contenido = contenido + "<tr><td> a" + strconv.Itoa(int(i)) + " </td><td port='a" + strconv.Itoa(int(i)) + "'> " + strconv.Itoa(int(inodo.Block[i])) + " </td></tr>"
+	}
+
+	contenido = contenido + "<tr><td> Type </td><td> " + strconv.Itoa(int(inodo.Type)) + " </td></tr>"
+	contenido = contenido + "<tr><td> Perm </td><td> " + strconv.Itoa(int(inodo.Perm)) + " </td></tr>"
+
+	contenido = contenido + "</table>\n>];\n" //FIN TABLA
+
+	for i := 0; i < 16; i++ {
+		if inodo.Block[i] != -1 {
+
+			if inodo.Type == 0 {
+				apuntador := superBloque.Block_start + int64(superBloque.Block_Size)*int64(inodo.Block[i])
+				bloqueC := structs.LeerBloqueC(archivo, apuntador)
+				contenido = contenido + self.graficarBloqueC(bloqueC, inodo.Block[i])
+			} else if inodo.Type == 1 {
+				apuntador := superBloque.Block_start + int64(superBloque.Block_Size)*int64(inodo.Block[i])
+				bloqueA := structs.LeerBloqueA(archivo, apuntador)
+				contenido = contenido + self.graficarBloqueA(bloqueA, inodo.Block[i])
+			}
+
+		}
+	}
+
+	//Graficar apuntadores
+	for i := 0; i < 16; i++ {
+		if inodo.Block[i] != -1 {
+			contenido = contenido + id + ":a" + strconv.Itoa(i) + "->"
+			contenido = contenido + "B" + strconv.Itoa(int(inodo.Block[i])) + "\n"
+		}
+	}
+
+	return contenido
+}
+
+//GRAFICAR EL BLOQUE DE CARPETAS
+func (self Rep) graficarBloqueC(bloque structs.BloqueCarpeta, numBloque int32) string {
+	contenido := "B" + strconv.Itoa(int(numBloque)) + "[\nshape=plaintext\nlabel=<"
+	contenido = contenido + "<table border='1' cellborder='1'>" //INICIO TABLA
+	contenido = contenido + "<tr><td colspan=\"2\"> Bloque " + strconv.Itoa(int(numBloque)) + " </td></tr>"
+
+	for i := 0; i < len(bloque.Contenido); i++ {
+		cont := bloque.Contenido[i]
+		contenido = contenido + "<tr><td> " + structs.GetNameBloqueString(cont.Name) + " </td><td port='a" + strconv.Itoa(int(i)) + "'> " + strconv.Itoa(int(cont.Apuntador)) + " </td></tr>"
+	}
+
+	contenido = contenido + "</table>\n>];\n" //FIN TABLA
+
+	for i := 0; i < len(bloque.Contenido); i++ {
+		cont := bloque.Contenido[i]
+		name := structs.GetNameBloqueString(cont.Name)
+		if name != "." && name != ".." && cont.Apuntador != -1 {
+			contenido = contenido + "B" + strconv.Itoa(int(numBloque)) + ":a" + strconv.Itoa(i) + "->"
+			contenido = contenido + "I" + strconv.Itoa(int(cont.Apuntador)) + "\n"
+		}
+
+	}
+
+	return contenido
+}
+
+//GRAFICAR EL BLOQUE DE ARCHIVOS
+func (self Rep) graficarBloqueA(bloque structs.BloqueArchivo, numBloque int32) string {
+	contenido := "B" + strconv.Itoa(int(numBloque)) + "[\nshape=plaintext\nlabel=<"
+	contenido = contenido + "<table border='1' cellborder='1'>" //INICIO TABLA
+	contenido = contenido + "<tr><td colspan=\"1\"> Bloque " + strconv.Itoa(int(numBloque)) + " </td></tr>"
+
+	txtBloque := ""
+	corte := 0
+	for i := 0; i < len(bloque.Contenido); i++ {
+		if bloque.Contenido[i] == 0 {
+			corte = i
+			break
+		} else if bloque.Contenido[i] == '\n' {
+			txtBloque = txtBloque + "\\n"
+		} else {
+			txtBloque = txtBloque + string(bloque.Contenido[i])
+		}
+	}
+
+	for i := corte; i < len(bloque.Contenido); i++ {
+		txtBloque = txtBloque + strconv.Itoa(int(bloque.Contenido[i]))
+	}
+
+	contenido = contenido + "<tr><td>" + txtBloque + "</td></tr>"
+
+	contenido = contenido + "</table>\n>];\n" //FIN TABLA
+	return contenido
+}
+
+//Grafica
+func (self Rep) repFile(mount ParticionMontada) {
+
 }
