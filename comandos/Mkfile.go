@@ -95,7 +95,6 @@ func (self Mkfile) getContenido() string {
 
 //CREA EL EL ARCHIVO SIN TOMAR EN CUENTA LOS PADRES
 func (self Mkfile) crearArchivoSinPadre(archivo *os.File, superbloque structs.SuperBloque, n int32, partStart int64, Path string) structs.SuperBloque {
-	fmt.Println(Path)
 	carpetas := strings.Split(Path, "/")
 	carpetaNueva := carpetas[len(carpetas)-1]
 

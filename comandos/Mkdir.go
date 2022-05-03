@@ -69,7 +69,6 @@ func (self Mkdir) tieneErrores() bool {
 
 //CREA LA CARPETA SOLICITADA (NO CREA LAS CARPETAS PADRES SI NO EXISTEN)
 func (self Mkdir) CrearCarpetaSinPadres(archivo *os.File, superbloque structs.SuperBloque, n int32, partStart int64, Path string) structs.SuperBloque {
-	fmt.Println(Path)
 	carpetas := strings.Split(Path, "/")
 	carpetaNueva := carpetas[len(carpetas)-1]
 

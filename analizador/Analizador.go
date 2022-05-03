@@ -70,6 +70,12 @@ func (self Analizador) Analizar(entrada string) {
 			} else if strings.ToLower(comando[0]) == "mkfile" {
 				self.cmdMkfile(comando)
 
+			} else if strings.ToLower(comando[0]) == "rmgrp" {
+				self.cmdRmgrp(comando)
+
+			} else if strings.ToLower(comando[0]) == "rmusr" {
+				self.cmdRmusr(comando)
+
 			}
 
 		}
@@ -87,7 +93,7 @@ func (self Analizador) getComando(linea string) []string {
 
 		if i%2 == 0 {
 			//Quito espacios
-			comillas[i] = comillas[i] + " "
+			comillas[i] = strings.Trim(comillas[i], string(rune(uint(13))))
 			espacios := strings.Split(comillas[i], " ")
 			for j := 0; j < len(espacios); j++ {
 
@@ -472,4 +478,40 @@ func (self Analizador) cmdMkfile(comando []string) {
 	}
 
 	cmd.Ejecutar()
+}
+
+func (self Analizador) cmdRmgrp(comando []string) {
+	cmd := comandos.NewMkgrp()
+
+	for i := 1; i < len(comando); i++ {
+		if i%2 != 0 && (i+1) < len(comando) {
+			if strings.ToLower(comando[i]) == "-name" {
+				if (i + 1) < len(comando) {
+					cmd.Name = comando[i+1]
+				}
+			} else {
+				fmt.Println("Error: El comando exec no contiene el comando \"" + comando[i] + "\"")
+			}
+		}
+	}
+
+	cmd.EliminarGrupo()
+}
+
+func (self Analizador) cmdRmusr(comando []string) {
+	cmd := comandos.NewMkuser()
+
+	for i := 1; i < len(comando); i++ {
+		if i%2 != 0 && (i+1) < len(comando) {
+			if strings.ToLower(comando[i]) == "-usuario" {
+				if (i + 1) < len(comando) {
+					cmd.Usuario = comando[i+1]
+				}
+			} else {
+				fmt.Println("Error: El comando exec no contiene el comando \"" + comando[i] + "\"")
+			}
+		}
+	}
+
+	cmd.EliminarUsuario()
 }

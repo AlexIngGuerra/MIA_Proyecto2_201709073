@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"unsafe"
 )
 
@@ -44,7 +45,7 @@ func (self Rep) Ejecutar() {
 		} else if self.Name == "tree" {
 			self.repTree(DotPath, mount)
 		} else if self.Name == "file" {
-
+			self.repFile(DotPath, mount)
 		}
 
 	}
@@ -341,6 +342,65 @@ func (self Rep) graficarBloqueA(bloque structs.BloqueArchivo, numBloque int32) s
 }
 
 //Grafica
-func (self Rep) repFile(mount ParticionMontada) {
+func (self Rep) repFile(DotPath string, mount ParticionMontada) {
+
+	archivo, err := os.OpenFile(mount.Path, os.O_RDWR, 0777)
+	defer archivo.Close()
+	if err != nil {
+		fmt.Println("Error: No se ha podido abrir el archivo")
+		return
+	}
+
+	mbr := structs.GetMbr(mount.Path)
+	part := structs.GetParticion(mount.Name, mbr, archivo)
+	superbloque := structs.LeerSuperBloque(archivo, part.Start)
+	//n := structs.GetN(part.Size)
+
+	carpetas := strings.Split(self.Ruta, "/")
+
+	apuntador := superbloque.Inode_start
+	inodo := structs.LeerInodo(archivo, apuntador)
+
+	for c := 1; c < len(carpetas); c++ {
+		ino, ap, _ := structs.GetSiguienteInodo(archivo, superbloque, inodo, carpetas[c])
+		inodo = ino
+		apuntador = ap
+	}
+
+	if apuntador == -1 || inodo.Uid == 0 || inodo.Gid == 0 {
+		fmt.Println("Error: carpetas/archivo faltantes")
+		return
+	}
+	bloques := structs.ObtenerBloquesArchivo(archivo, superbloque, inodo)
+	txt := structs.LeerBloquesArchivo(bloques)
+	txt = strings.Replace(txt, "\n", "\\n", 1)
+
+	contenido := "digraph G {\n"
+	contenido += " Nodo[label=\"{"
+	contenido += self.Ruta + "|" + txt
+	contenido += "}\" shape=record]"
+	contenido += "}"
+
+	archivo2, err := os.OpenFile(DotPath, os.O_RDWR, 0777)
+	if err != nil {
+		fmt.Println("Error: No se pudo abrir archivo")
+		return
+	}
+	defer archivo2.Close()
+
+	b := []byte(contenido)
+	err2 := ioutil.WriteFile(DotPath, b, 0777)
+	if err2 != nil {
+		fmt.Println("Error: Error al escribir el archivo")
+		return
+	}
+
+	cmd := exec.Command("dot", "-Tsvg", "-o", self.Path+".svg", DotPath)
+	_, err3 := cmd.Output()
+	if err3 != nil {
+		fmt.Println("Error: Dot no pudo generar el svg: ", err)
+	}
+	fmt.Println("Reporte Generado: " + self.Path + ".svg")
+	fmt.Print("\n")
 
 }
