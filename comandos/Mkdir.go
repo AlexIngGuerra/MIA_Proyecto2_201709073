@@ -44,7 +44,9 @@ func (self Mkdir) Ejecutar() {
 	n := structs.GetN(part.Size)
 
 	if !self.P {
-		self.CrearCarpetaSinPadres(archivo, superBloque, n, part.Start)
+		self.CrearCarpetaSinPadres(archivo, superBloque, n, part.Start, self.Path)
+	} else {
+		self.CrearCarpetaConPadres(archivo, superBloque, n, part.Start, self.Path)
 	}
 
 	fmt.Print("\n")
@@ -66,9 +68,9 @@ func (self Mkdir) tieneErrores() bool {
 }
 
 //CREA LA CARPETA SOLICITADA (NO CREA LAS CARPETAS PADRES SI NO EXISTEN)
-func (self Mkdir) CrearCarpetaSinPadres(archivo *os.File, superbloque structs.SuperBloque, n int32, partStart int64) {
-
-	carpetas := strings.Split(self.Path, "/")
+func (self Mkdir) CrearCarpetaSinPadres(archivo *os.File, superbloque structs.SuperBloque, n int32, partStart int64, Path string) structs.SuperBloque {
+	fmt.Println(Path)
+	carpetas := strings.Split(Path, "/")
 	carpetaNueva := carpetas[len(carpetas)-1]
 
 	apuntador := superbloque.Inode_start
@@ -86,12 +88,12 @@ func (self Mkdir) CrearCarpetaSinPadres(archivo *os.File, superbloque structs.Su
 
 	if apuntador == -1 || inodo.Uid == 0 || inodo.Gid == 0 {
 		fmt.Println("Error: carpetas padre faltantes")
-		return
+		return superbloque
 	}
 
 	if structs.ExisteNombreInodo(archivo, superbloque, inodo, carpetaNueva) {
 		fmt.Println("Error: La carpeta que solicita crear ya existe")
-		return
+		return superbloque
 	}
 
 	num := structs.BuscarBitLibre(archivo, int64(superbloque.Bm_inode_start), superbloque.Inodes_count)
@@ -109,4 +111,17 @@ func (self Mkdir) CrearCarpetaSinPadres(archivo *os.File, superbloque structs.Su
 	superbloque = structs.EscribirInodo(archivo, superbloque, inodoNuevo)
 	structs.EscribirSuperBloque(archivo, superbloque, partStart)
 	fmt.Println("Carpeta creada")
+	return superbloque
+}
+
+//CREAMOS LA CARPETA CON LOS PADRES
+func (self Mkdir) CrearCarpetaConPadres(archivo *os.File, superbloque structs.SuperBloque, n int32, partStart int64, Path string) {
+	carpetas := strings.Split(Path, "/")
+	dirActual := ""
+	for i := 1; i < len(carpetas); i++ {
+		fmt.Println(dirActual)
+		dirActual += "/" + carpetas[i]
+		superbloque = self.CrearCarpetaSinPadres(archivo, superbloque, n, partStart, dirActual)
+		structs.EscribirSuperBloque(archivo, superbloque, partStart)
+	}
 }

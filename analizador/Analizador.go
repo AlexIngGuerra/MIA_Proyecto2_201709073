@@ -79,7 +79,6 @@ func (self Analizador) Analizar(entrada string) {
 
 //Obtener el comando
 func (self Analizador) getComando(linea string) []string {
-	linea = linea + " "
 	var comando []string
 	comentario := strings.Split(linea, "#")
 	comillas := strings.Split(comentario[0], "\"")
@@ -88,6 +87,7 @@ func (self Analizador) getComando(linea string) []string {
 
 		if i%2 == 0 {
 			//Quito espacios
+			comillas[i] = comillas[i] + " "
 			espacios := strings.Split(comillas[i], " ")
 			for j := 0; j < len(espacios); j++ {
 
@@ -451,6 +451,7 @@ func (self Analizador) cmdMkfile(comando []string) {
 				cmd.Path = comando[i+1]
 			}
 		} else if strings.ToLower(comando[i]) == "-r" {
+			cmd.R = true
 
 		} else if strings.ToLower(comando[i]) == "-size" {
 			if (i + 1) < len(comando) {
