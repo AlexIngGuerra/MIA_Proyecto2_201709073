@@ -99,7 +99,9 @@ func (self Login) buscarUsuario(archivo *os.File, superBloque structs.SuperBloqu
 		for n := 0; n < len(grupos[i].Users); n++ {
 
 			if self.Usuario == grupos[i].Users[n].User &&
-				self.Password == grupos[i].Users[n].Password {
+				self.Password == grupos[i].Users[n].Password &&
+				grupos[i].Id != 0 && grupos[i].Users[n].Id != 0 {
+
 				Logeado = Usuario{Usuario: self.Usuario, Uid: grupos[i].Users[n].Id, Gid: grupos[i].Id, Id: self.Id}
 				loginExitoso = true
 				break

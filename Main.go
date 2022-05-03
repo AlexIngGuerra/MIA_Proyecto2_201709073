@@ -2,30 +2,29 @@ package main
 
 import (
 	"MIA/analizador"
+	"bufio"
 	"fmt"
+	"os"
+	"strings"
 )
 
 func main() {
 	fmt.Println("WALTER ALEXANDER GUERRA DUQUE 201709073")
-
-	initPrueba()
-}
-
-func initPrueba() {
-	analizador := analizador.NewAnalizador()
-	var comando string
-	comando = "exec -path=\"C:/Users/WALTER/Dropbox/Mi PC (DESKTOP-DUSC6PO)/Documents/1/Entradas/entrada2.script\""
-	analizador.Analizar(comando)
+	initProyecto()
 }
 
 func initProyecto() {
 	analizador := analizador.NewAnalizador()
-	var comando string
-	for true {
-		fmt.Scanln(&comando)
-		analizador.Analizar(comando)
-		if comando == "salir" {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		cmd, _ := reader.ReadString('\n')
+		cmd = strings.Replace(cmd, "\n", "", -1)
+		cmd = strings.Trim(cmd, string(uint8(13)))
+		if cmd == "salir" {
 			break
 		}
+
+		analizador.Analizar(cmd)
+
 	}
 }
